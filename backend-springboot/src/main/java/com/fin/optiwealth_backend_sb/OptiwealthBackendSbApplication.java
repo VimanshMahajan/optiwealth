@@ -9,5 +9,4 @@ public class OptiwealthBackendSbApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(OptiwealthBackendSbApplication.class, args);
 	}
-
 }
