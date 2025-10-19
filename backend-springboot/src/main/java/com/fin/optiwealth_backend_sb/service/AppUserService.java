@@ -1,30 +1,51 @@
 package com.fin.optiwealth_backend_sb.service;
 
-
+import com.fin.optiwealth_backend_sb.dto.UserRegistrationDto;
+import com.fin.optiwealth_backend_sb.dto.UserResponseDto;
 import com.fin.optiwealth_backend_sb.entity.AppUser;
 import com.fin.optiwealth_backend_sb.repository.AppUserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
+@RequiredArgsConstructor
 public class AppUserService {
 
-    @Autowired
-    private AppUserRepository appUserRepository;
 
-    public AppUser saveUser(AppUser user) {
-        return appUserRepository.save(user);
+    private final AppUserRepository userRepository;
+
+    private final PasswordEncoder passwordEncoder;
+
+    /**
+     * Registers a new user. Throws RuntimeException on duplicate email.
+     */
+    public UserResponseDto register(UserRegistrationDto dto) {
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("Email already registered");
+        }
+
+        AppUser user = AppUser.builder()
+                .username(dto.getUsername())
+                .email(dto.getEmail())
+                .passwordHash(passwordEncoder.encode(dto.getPassword()))
+                .build();
+
+        AppUser saved = userRepository.save(user);
+        return toResponseDto(saved);
     }
 
-    public List<AppUser> getAllUsers() {
-        return appUserRepository.findAll();
-    }
-
-    public AppUser getUserById(Long id) {
-        return appUserRepository.findById(id)
+    public AppUser findByIdOrThrow(Long id) {
+        return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    private UserResponseDto toResponseDto(AppUser user) {
+        UserResponseDto out = new UserResponseDto();
+        out.setId(user.getId());
+        out.setUsername(user.getUsername());
+        out.setEmail(user.getEmail());
+        return out;
+    }
 }
