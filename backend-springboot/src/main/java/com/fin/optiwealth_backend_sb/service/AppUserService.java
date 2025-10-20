@@ -1,5 +1,6 @@
 package com.fin.optiwealth_backend_sb.service;
 
+import com.fin.optiwealth_backend_sb.dto.LoginClassDto;
 import com.fin.optiwealth_backend_sb.dto.UserRegistrationDto;
 import com.fin.optiwealth_backend_sb.dto.UserResponseDto;
 import com.fin.optiwealth_backend_sb.entity.AppUser;
@@ -36,6 +37,17 @@ public class AppUserService {
         return toResponseDto(saved);
     }
 
+    public UserResponseDto login(LoginClassDto dto) {
+        AppUser user = userRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(dto.getPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        return toResponseDto(user);
+    }
+
     public AppUser findByIdOrThrow(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -48,4 +60,6 @@ public class AppUserService {
         out.setEmail(user.getEmail());
         return out;
     }
+
+
 }
