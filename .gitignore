@@ -19,6 +19,7 @@ target/
 build/
 out/
 !gradle/wrapper/gradle-wrapper.jar
+application.properties
 
 # --- Node / React ---
 node_modules/
