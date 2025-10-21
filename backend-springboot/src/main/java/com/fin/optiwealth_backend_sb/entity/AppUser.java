@@ -8,12 +8,9 @@ import lombok.*;
 @Table(name = "app_user", indexes = {
         @Index(columnList = "email", name = "idx_user_email", unique = true)
 })
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
-@EqualsAndHashCode
 @Builder
 public class AppUser {
 
