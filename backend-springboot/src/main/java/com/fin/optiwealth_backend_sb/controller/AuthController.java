@@ -1,6 +1,7 @@
 package com.fin.optiwealth_backend_sb.controller;
 
 import com.fin.optiwealth_backend_sb.dto.LoginClassDto;
+import com.fin.optiwealth_backend_sb.dto.LoginResponse;
 import com.fin.optiwealth_backend_sb.dto.UserRegistrationDto;
 import com.fin.optiwealth_backend_sb.dto.UserResponseDto;
 import com.fin.optiwealth_backend_sb.entity.AppUser;
@@ -34,11 +35,4 @@ public class AuthController {
         return ResponseEntity.ok(new LoginResponse(user, token));
     }
 
-    // DTO for returning token + user
-    @lombok.Data
-    @lombok.AllArgsConstructor
-    static class LoginResponse {
-        private UserResponseDto user;
-        private String token;
-    }
 }

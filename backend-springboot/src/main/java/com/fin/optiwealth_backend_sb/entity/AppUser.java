@@ -31,6 +31,4 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    // NOTE: if you later add bidirectional links, avoid exposing them here
-    // to prevent infinite JSON recursion (use @JsonManagedReference / @JsonBackReference).
 }
