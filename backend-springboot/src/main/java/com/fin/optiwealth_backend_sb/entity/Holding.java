@@ -1,20 +1,16 @@
 package com.fin.optiwealth_backend_sb.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "holding")
-@Builder
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
-@EqualsAndHashCode
+@Builder
 public class Holding {
 
     @Id
@@ -22,10 +18,14 @@ public class Holding {
     private Long id;
 
     private String symbol;
+
     private BigDecimal quantity;
+
     private BigDecimal avgCost;
 
-    @ManyToOne
-    @JoinColumn(name = "portfolio_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "portfolio_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Portfolio portfolio;
 }
