@@ -1,5 +1,6 @@
 package com.fin.optiwealth_backend_sb.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ public class Portfolio {
     @OneToMany(mappedBy = "portfolio",
             cascade = CascadeType.ALL,
             orphanRemoval = true)
+    @JsonManagedReference
     private List<Holding> holdings = new ArrayList<>();
 
     @PrePersist

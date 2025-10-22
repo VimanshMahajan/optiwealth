@@ -1,36 +1,60 @@
 package com.fin.optiwealth_backend_sb.controller;
+
 import com.fin.optiwealth_backend_sb.entity.Holding;
 import com.fin.optiwealth_backend_sb.service.HoldingService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/holdings")
+@RequiredArgsConstructor
+@RequestMapping("/api")
 public class HoldingController {
 
-    @Autowired
-    private HoldingService holdingService;
+    private final HoldingService holdingService;
 
-    @GetMapping
-    public List<Holding> getAllHoldings() {
-        return holdingService.getAllHoldings();
+    // --- Add a holding to a portfolio ---
+    @PostMapping("/portfolios/{portfolioId}/holdings")
+    public ResponseEntity<Holding> addHolding(
+            @PathVariable Long portfolioId,
+            @RequestBody Map<String, String> request
+    ) {
+        String symbol = request.get("symbol");
+        BigDecimal quantity = new BigDecimal(request.get("quantity"));
+        BigDecimal avgCost = new BigDecimal(request.get("avgCost"));
+
+        Holding holding = holdingService.addHolding(portfolioId, symbol, quantity, avgCost);
+        return ResponseEntity.ok(holding);
     }
 
-    @PostMapping
-    public Holding createHolding(@RequestBody Holding holding) {
-        return holdingService.saveHolding(holding);
+    // --- Get all holdings in a portfolio ---
+    @GetMapping("/portfolios/{portfolioId}/holdings")
+    public ResponseEntity<List<Holding>> getHoldings(@PathVariable Long portfolioId) {
+        List<Holding> holdings = holdingService.getHoldings(portfolioId);
+        return ResponseEntity.ok(holdings);
     }
 
-    @GetMapping("/{id}")
-    public Holding getHoldingById(@PathVariable Long id) {
-        return holdingService.getHoldingById(id);
+    // --- Update a holding ---
+    @PutMapping("/holdings/{holdingId}")
+    public ResponseEntity<Holding> updateHolding(
+            @PathVariable Long holdingId,
+            @RequestBody Map<String, String> request
+    ) {
+        BigDecimal quantity = new BigDecimal(request.get("quantity"));
+        BigDecimal avgCost = new BigDecimal(request.get("avgCost"));
+
+        Holding updated = holdingService.updateHolding(holdingId, quantity, avgCost);
+        return ResponseEntity.ok(updated);
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteHolding(@PathVariable Long id) {
-        holdingService.deleteHolding(id);
+    // --- Delete a holding ---
+    @DeleteMapping("/holdings/{holdingId}")
+    public ResponseEntity<String> deleteHolding(@PathVariable Long holdingId) {
+        holdingService.deleteHolding(holdingId);
+        return ResponseEntity.ok("Holding deleted successfully");
     }
 }
