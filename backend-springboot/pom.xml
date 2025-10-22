@@ -97,6 +97,12 @@
 			<artifactId>spring-security-config</artifactId>
 			<version>6.5.5</version>
 		</dependency>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20231013</version>
+		</dependency>
+
 
 	</dependencies>
 
