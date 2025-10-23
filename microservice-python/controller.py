@@ -32,12 +32,7 @@ def analyze_portfolio_route():
         if not data or "holdings" not in data:
             return jsonify({"error": "Missing or invalid payload"}), 400
 
-        portfolio_id = data.get("portfolioId")
-        holdings = data["holdings"]
-
-        result = analyze_portfolio(holdings)
-        result["portfolioId"] = portfolio_id
-
+        result = analyze_portfolio(data)
         return jsonify(result), 200
 
     except Exception as e:

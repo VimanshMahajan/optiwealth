@@ -6,12 +6,54 @@ from finance_data import get_current_quote, get_historical_data, compute_metrics
 # -------------------------------------------------
 # Compute Per-Holding Statistics
 # -------------------------------------------------
+
+# def analyze_holdings(holdings: list):
+#     """
+#     Takes a list of holdings (symbol, quantity, avgCost)
+#     and computes per-holding analytics.
+#     """
+#     analyzed = []
+#     for h in holdings:
+#         symbol = h["symbol"] + ".NS" if not h["symbol"].endswith(".NS") else h["symbol"]
+#         quantity = h["quantity"]
+#         avg_cost = h["avgCost"]
+#
+#         quote = get_current_quote(symbol)
+#         if not quote:
+#             continue
+#
+#         current_price = quote["currentPrice"]
+#         current_value = current_price * quantity
+#         total_cost = avg_cost * quantity
+#         profit = current_value - total_cost
+#         profit_percent = ((current_price - avg_cost) / avg_cost) * 100 if avg_cost else None
+#
+#         analyzed.append({
+#             "symbol": h["symbol"],
+#             "quantity": quantity,
+#             "avgCost": avg_cost,
+#             "currentPrice": current_price,
+#             "currentValue": current_value,
+#             "profit": profit,
+#             "profitPercent": profit_percent
+#         })
+#
+#     return analyzed
+#
+
+# -------------------------------------------------
+# Portfolio-Level Aggregation
+# -------------------------------------------------
+
 def analyze_holdings(holdings: list):
     """
     Takes a list of holdings (symbol, quantity, avgCost)
-    and computes per-holding analytics.
+    and computes per-holding analytics (including historical risk metrics).
     """
     analyzed = []
+    end = datetime.today().date()
+    start = end - timedelta(days=90)  # last 3 months for metrics
+
     for h in holdings:
         symbol = h["symbol"] + ".NS" if not h["symbol"].endswith(".NS") else h["symbol"]
         quantity = h["quantity"]
@@ -27,22 +69,28 @@ def analyze_holdings(holdings: list):
         profit = current_value - total_cost
         profit_percent = ((current_price - avg_cost) / avg_cost) * 100 if avg_cost else None
 
+        # --- NEW: compute historical metrics ---
+        hist = get_historical_data(symbol, str(start), str(end))
+        stock_metrics = compute_metrics(hist) if not hist.empty else {}
+
         analyzed.append({
             "symbol": h["symbol"],
-            "quantity": quantity,
-            "avgCost": avg_cost,
-            "currentPrice": current_price,
-            "currentValue": current_value,
-            "profit": profit,
-            "profitPercent": profit_percent
+            "quantity": int(quantity),
+            "avgCost": float(avg_cost),
+            "currentPrice": float(current_price),
+            "currentValue": float(current_value),
+            "profit": float(profit),
+            "profitPercent": float(profit_percent) if profit_percent is not None else None,
+            "volatility": float(stock_metrics.get("volatility")) if stock_metrics.get(
+                "volatility") is not None else None,
+            "sharpeRatio": float(stock_metrics.get("sharpeRatio")) if stock_metrics.get(
+                "sharpeRatio") is not None else None,
+            "cumulativeReturn": float(stock_metrics.get("cumulativeReturn")) if stock_metrics.get(
+                "cumulativeReturn") is not None else None
         })
 
     return analyzed
 
-
-# -------------------------------------------------
-# Portfolio-Level Aggregation
-# -------------------------------------------------
 def compute_portfolio_summary(analyzed_holdings: list):
     """
     Compute total portfolio value, profit/loss, etc.
@@ -53,7 +101,7 @@ def compute_portfolio_summary(analyzed_holdings: list):
     profit_percent = ((total_value - total_cost) / total_cost * 100) if total_cost else None
 
     for h in analyzed_holdings:
-        h["currentPercent"] = (h["currentValue"] / total_value) * 100 if total_value else 0
+        h["currentPercent"] = float(h["currentValue"] / total_value * 100) if total_value else 0.0
 
     return {
         "portfolioValue": total_value,
@@ -98,9 +146,9 @@ def compute_portfolio_metrics(holdings: list, period_days: int = 90, risk_free_r
     sharpe_ratio = (portfolio_return - (risk_free_rate / 252)) / portfolio_volatility if portfolio_volatility else None
 
     return {
-        "averageDailyReturn": portfolio_return,
-        "volatility": portfolio_volatility,
-        "sharpeRatio": sharpe_ratio
+        "averageDailyReturn": float(portfolio_return),
+        "volatility": float(portfolio_volatility),
+        "sharpeRatio": float(sharpe_ratio) if sharpe_ratio is not None else None
     }
 
 
@@ -150,9 +198,8 @@ def optimize_portfolio(holdings: list, num_portfolios: int = 5000, risk_free_rat
         for symbol, w in zip(symbols, best_weights):
             recommended.append({
                 "symbol": symbol,
-                "recommendedPercent": round(w * 100, 2)
+                "recommendedPercent": float(round(w * 100, 2))
             })
-
     return recommended
 
 
