@@ -19,13 +19,13 @@ def analyze_portfolio_route():
     Endpoint to analyze a portfolio.
     Expects JSON input in the following format:
     {
-        "portfolioId": 2,
-        "holdings": [
-            {"symbol": "RVNL", "quantity": 15, "avgCost": 200.10},
-            {"symbol": "BEL", "quantity": 5, "avgCost": 100.30},
-            {"symbol": "IDFC", "quantity": 10, "avgCost": 103.80}
-        ]
-    }
+    "portfolioId": 2,
+    "holdings": [
+        {"symbol": "RVNL", "quantity": 15, "avgCost": 200.10},
+        {"symbol": "BEL", "quantity": 5, "avgCost": 100.30},
+        {"symbol": "ITC", "quantity": 10, "avgCost": 103.80}
+    ]
+}
     """
     try:
         data = request.get_json()
