@@ -248,5 +248,4 @@ if __name__ == "__main__":
     }
 
     result = analyze_portfolio(sample_portfolio)
-    print(pd.DataFrame(result["holdings"]))
-    print("\nSummary:", {k: result[k] for k in ["portfolioValue", "profit", "profitPercent", "sharpeRatio"]})
+    print(result)
