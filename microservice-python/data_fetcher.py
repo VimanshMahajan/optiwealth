@@ -117,7 +117,7 @@ def compute_metrics(historical_df: pd.DataFrame, risk_free_rate: float = 0.06):
         avg_return = df["Daily Return"].mean()
         volatility = df["Daily Return"].std()
         sharpe_ratio = (avg_return - (risk_free_rate / 252)) / volatility if volatility else None
-        cumulative_return = (df["Close"].iloc[-1] / df["Close"].iloc[0]) - 1
+        cumulative_return = float(((df["Close"].squeeze().iloc[-1] / df["Close"].squeeze().iloc[0]) - 1))
 
         return {
             "averageDailyReturn": round(avg_return, 6),
