@@ -62,6 +62,8 @@ Link the data to support the actionable suggestion
   Do not infer or hallucinate beyond available numbers.
   If something isn’t in the JSON, do not mention it.
 
+- Stocks will be from Indian stock exchange (NSE) and prices in Rupees.
+
 - **Every section must contain at least one actionable suggestion** derived logically from the data.
   (Examples: rebalance, hold, reduce exposure, diversify, monitor, accumulate, take profits.)
 
