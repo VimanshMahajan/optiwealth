@@ -51,6 +51,7 @@ Link the data to support the actionable suggestion
 5. **summaryConclusion**
    - Provide an overall portfolio interpretation in plain language.
    - Combine performance, risk, and forecast into one cohesive view.
+   - Provide short insights about actionable steps for the investor.
    - End with a **clear investor-friendly recommendation** (e.g., “You are well-positioned for stable returns if you rebalance slightly towards low-volatility stocks.”).
 
 ---
