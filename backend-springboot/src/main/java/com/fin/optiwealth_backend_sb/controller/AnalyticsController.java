@@ -1,11 +1,8 @@
 package com.fin.optiwealth_backend_sb.controller;
 
-import com.fin.optiwealth_backend_sb.repository.PortfolioRepository;
 import com.fin.optiwealth_backend_sb.service.AnalyticsService;
-import com.fin.optiwealth_backend_sb.service.PortfolioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
