@@ -24,79 +24,107 @@ public class HoldingService {
 
     // --- Get the currently authenticated user ---
     private AppUser getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            throw new RuntimeException("No authenticated user found");
-        }
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || auth.getName() == null) {
+                throw new RuntimeException("No authenticated user found");
+            }
 
-        return appUserRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            return appUserRepository.findByEmail(auth.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error fetching current user: " + e.getMessage(), e);
+        }
     }
 
     // --- Add a new holding to a portfolio ---
     public Holding addHolding(Long portfolioId, String symbol, BigDecimal quantity, BigDecimal avgCost) {
-        AppUser user = getCurrentUser();
+        try {
+            AppUser user = getCurrentUser();
 
-        Portfolio portfolio = portfolioRepository.findById(portfolioId)
-                .orElseThrow(() -> new RuntimeException("Portfolio not found"));
+            Portfolio portfolio = portfolioRepository.findById(portfolioId)
+                    .orElseThrow(() -> new RuntimeException("Portfolio not found"));
 
-        if (!portfolio.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized: You do not own this portfolio");
+            if (!portfolio.getUser().getId().equals(user.getId())) {
+                throw new RuntimeException("Unauthorized: You do not own this portfolio");
+            }
+
+            Holding holding = Holding.builder()
+                    .symbol(symbol)
+                    .quantity(quantity)
+                    .avgCost(avgCost)
+                    .build();
+
+            portfolio.addHolding(holding); // sets bidirectional link
+            return holdingRepository.save(holding);
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error adding holding: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error occurred while adding holding: " + e.getMessage(), e);
         }
-
-        Holding holding = Holding.builder()
-                .symbol(symbol)
-                .quantity(quantity)
-                .avgCost(avgCost)
-                .build();
-
-        portfolio.addHolding(holding); // sets bidirectional link
-        return holdingRepository.save(holding);
     }
 
     // --- Get all holdings of a portfolio ---
     public List<Holding> getHoldings(Long portfolioId) {
-        AppUser user = getCurrentUser();
+        try {
+            AppUser user = getCurrentUser();
 
-        Portfolio portfolio = portfolioRepository.findById(portfolioId)
-                .orElseThrow(() -> new RuntimeException("Portfolio not found"));
+            Portfolio portfolio = portfolioRepository.findById(portfolioId)
+                    .orElseThrow(() -> new RuntimeException("Portfolio not found"));
 
-        if (!portfolio.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized: You do not own this portfolio");
+            if (!portfolio.getUser().getId().equals(user.getId())) {
+                throw new RuntimeException("Unauthorized: You do not own this portfolio");
+            }
+
+            return portfolio.getHoldings();
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error fetching holdings: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error occurred while fetching holdings: " + e.getMessage(), e);
         }
-
-        return portfolio.getHoldings();
     }
 
     // --- Update an existing holding ---
     public Holding updateHolding(Long holdingId, BigDecimal quantity, BigDecimal avgCost) {
-        AppUser user = getCurrentUser();
+        try {
+            AppUser user = getCurrentUser();
 
-        Holding holding = holdingRepository.findById(holdingId)
-                .orElseThrow(() -> new RuntimeException("Holding not found"));
+            Holding holding = holdingRepository.findById(holdingId)
+                    .orElseThrow(() -> new RuntimeException("Holding not found"));
 
-        if (!holding.getPortfolio().getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized: You do not own this portfolio");
+            if (!holding.getPortfolio().getUser().getId().equals(user.getId())) {
+                throw new RuntimeException("Unauthorized: You do not own this portfolio");
+            }
+
+            holding.setQuantity(quantity);
+            holding.setAvgCost(avgCost);
+
+            return holdingRepository.save(holding);
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error updating holding: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error occurred while updating holding: " + e.getMessage(), e);
         }
-
-        holding.setQuantity(quantity);
-        holding.setAvgCost(avgCost);
-
-        return holdingRepository.save(holding);
     }
 
     // --- Delete a holding ---
     public void deleteHolding(Long holdingId) {
-        AppUser user = getCurrentUser();
+        try {
+            AppUser user = getCurrentUser();
 
-        Holding holding = holdingRepository.findById(holdingId)
-                .orElseThrow(() -> new RuntimeException("Holding not found"));
+            Holding holding = holdingRepository.findById(holdingId)
+                    .orElseThrow(() -> new RuntimeException("Holding not found"));
 
-        if (!holding.getPortfolio().getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized: You do not own this portfolio");
+            if (!holding.getPortfolio().getUser().getId().equals(user.getId())) {
+                throw new RuntimeException("Unauthorized: You do not own this portfolio");
+            }
+
+            holding.getPortfolio().removeHolding(holding); // maintain bidirectional link
+            holdingRepository.delete(holding);
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error deleting holding: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error occurred while deleting holding: " + e.getMessage(), e);
         }
-
-        holding.getPortfolio().removeHolding(holding); // maintain bidirectional link
-        holdingRepository.delete(holding);
     }
 }
