@@ -6,11 +6,13 @@ import com.fin.optiwealth_backend_sb.entity.Portfolio;
 import com.fin.optiwealth_backend_sb.repository.AppUserRepository;
 import com.fin.optiwealth_backend_sb.repository.HoldingRepository;
 import com.fin.optiwealth_backend_sb.repository.PortfolioRepository;
+import com.fin.optiwealth_backend_sb.util.SymbolValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import javax.naming.directory.InvalidAttributeIdentifierException;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -21,7 +23,7 @@ public class HoldingService {
     private final HoldingRepository holdingRepository;
     private final PortfolioRepository portfolioRepository;
     private final AppUserRepository appUserRepository;
-
+    private final SymbolValidator symbolValidator;
     // --- Get the currently authenticated user ---
     private AppUser getCurrentUser() {
         try {
@@ -41,6 +43,10 @@ public class HoldingService {
     public Holding addHolding(Long portfolioId, String symbol, BigDecimal quantity, BigDecimal avgCost) {
         try {
             AppUser user = getCurrentUser();
+
+            if(!symbolValidator.isValidSymbol(symbol)) {
+                throw new RuntimeException("Invalid stock symbol: " + symbol);
+            }
 
             Portfolio portfolio = portfolioRepository.findById(portfolioId)
                     .orElseThrow(() -> new RuntimeException("Portfolio not found"));
