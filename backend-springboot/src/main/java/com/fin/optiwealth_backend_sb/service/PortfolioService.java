@@ -22,46 +22,76 @@ public class PortfolioService {
 
     // Helper: get the currently logged-in user from the JWT SecurityContext
     private AppUser getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getPrincipal() == null) {
-            throw new RuntimeException("No authenticated user found");
-        }
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || auth.getPrincipal() == null) {
+                throw new RuntimeException("No authenticated user found");
+            }
 
-        String email = auth.getName(); // email comes from JWT token
-        return appUserRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            String email = auth.getName(); // email comes from JWT token
+            return appUserRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error fetching current user: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error while fetching current user: " + e.getMessage(), e);
+        }
     }
 
     public Portfolio createPortfolio(String name) {
-        AppUser currentUser = getCurrentUser();
+        try {
+            AppUser currentUser = getCurrentUser();
 
-        Portfolio portfolio = Portfolio.builder()
-                .name(name)
-                .user(currentUser)
-                .build();
+            Portfolio portfolio = Portfolio.builder()
+                    .name(name)
+                    .user(currentUser)
+                    .build();
 
-        return portfolioRepository.save(portfolio);
+            return portfolioRepository.save(portfolio);
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error creating portfolio: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error while creating portfolio: " + e.getMessage(), e);
+        }
     }
 
     public List<Portfolio> getUserPortfolios() {
-        AppUser currentUser = getCurrentUser();
-        return portfolioRepository.findByUser(currentUser);
+        try {
+            AppUser currentUser = getCurrentUser();
+            return portfolioRepository.findByUser(currentUser);
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error fetching user portfolios: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error while fetching portfolios: " + e.getMessage(), e);
+        }
     }
 
     public Portfolio getPortfolioById(Long id) {
-        AppUser currentUser = getCurrentUser();
-        Portfolio portfolio = portfolioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Portfolio not found"));
+        try {
+            AppUser currentUser = getCurrentUser();
+            Portfolio portfolio = portfolioRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Portfolio not found"));
 
-        if (!portfolio.getUser().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Unauthorized access to this portfolio");
+            if (!portfolio.getUser().getId().equals(currentUser.getId())) {
+                throw new RuntimeException("Unauthorized access to this portfolio");
+            }
+
+            return portfolio;
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error fetching portfolio: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error while fetching portfolio: " + e.getMessage(), e);
         }
-
-        return portfolio;
     }
 
     public void deletePortfolio(Long id) {
-        Portfolio portfolio = getPortfolioById(id);
-        portfolioRepository.delete(portfolio);
+        try {
+            Portfolio portfolio = getPortfolioById(id);
+            portfolioRepository.delete(portfolio);
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error deleting portfolio: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error while deleting portfolio: " + e.getMessage(), e);
+        }
     }
 }
