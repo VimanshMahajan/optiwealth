@@ -14,43 +14,59 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AppUserService {
 
-
     private final AppUserRepository userRepository;
-
     private final PasswordEncoder passwordEncoder;
 
     /**
      * Registers a new user. Throws RuntimeException on duplicate email.
      */
     public UserResponseDto register(UserRegistrationDto dto) {
-        if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("Email already registered");
+        try {
+            if (userRepository.existsByEmail(dto.getEmail())) {
+                throw new RuntimeException("Email already registered");
+            }
+
+            AppUser user = AppUser.builder()
+                    .username(dto.getUsername())
+                    .email(dto.getEmail())
+                    .passwordHash(passwordEncoder.encode(dto.getPassword()))
+                    .build();
+
+            AppUser saved = userRepository.save(user);
+            return toResponseDto(saved);
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error during user registration: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error during user registration: " + e.getMessage(), e);
         }
-
-        AppUser user = AppUser.builder()
-                .username(dto.getUsername())
-                .email(dto.getEmail())
-                .passwordHash(passwordEncoder.encode(dto.getPassword()))
-                .build();
-
-        AppUser saved = userRepository.save(user);
-        return toResponseDto(saved);
     }
 
     public UserResponseDto login(LoginClassDto dto) {
-        AppUser user = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+        try {
+            AppUser user = userRepository.findByEmail(dto.getEmail())
+                    .orElseThrow(() -> new RuntimeException("Invalid email or password"));
 
-        if (!passwordEncoder.matches(dto.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Invalid email or password");
+            if (!passwordEncoder.matches(dto.getPassword(), user.getPasswordHash())) {
+                throw new RuntimeException("Invalid email or password");
+            }
+
+            return toResponseDto(user);
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error during login: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error during login: " + e.getMessage(), e);
         }
-
-        return toResponseDto(user);
     }
 
     public AppUser findByIdOrThrow(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        try {
+            return userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error fetching user by ID: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error fetching user by ID: " + e.getMessage(), e);
+        }
     }
 
     private UserResponseDto toResponseDto(AppUser user) {
@@ -60,6 +76,4 @@ public class AppUserService {
         out.setEmail(user.getEmail());
         return out;
     }
-
-
 }
