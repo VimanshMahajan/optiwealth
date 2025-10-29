@@ -12,7 +12,6 @@ import java.time.ZonedDateTime;
 @Table(name = "top_picks")
 @Data
 @NoArgsConstructor
-@RequiredArgsConstructor
 public class TopPick {
 
     @Id
