@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
 import json
+import threading
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from NLP_layer.gemini import generate_response
 from report_generator import generate_portfolio_report
+from top_picks.top_picks import execute_picks
 
 app = Flask(__name__)
 
@@ -63,5 +66,28 @@ def analyze_portfolio_route():
         return jsonify({"error": str(e)}), 500
 
 
+# ==== Scheduler Setup ====
+
+def start_scheduler():
+    """Starts a background scheduler that updates top picks daily."""
+    scheduler = BackgroundScheduler()
+
+    # Run once at startup
+    print("Initial Top Picks update running...")
+    try:
+        execute_picks()
+    except Exception as e:
+        print(f"Initial execution failed: {e}")
+
+    # Schedule daily updates (every 24 hours)
+    scheduler.add_job(execute_picks, 'interval', hours=24, id='daily_top_picks_job')
+    scheduler.start()
+    print("Scheduler started — Top Picks will update every 24 hours.")
+
+
 if __name__ == "__main__":
+    # Start the scheduler in a separate thread (non-blocking)
+    threading.Thread(target=start_scheduler, daemon=True).start()
+
+    # Start Flask app
     app.run(host="0.0.0.0", port=8000, debug=True)

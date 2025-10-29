@@ -14,8 +14,10 @@ DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
     "port": int(os.getenv("DB_PORT", 5432))
 }
-
-CSV_PATH = "../utils/check_file.csv"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CHECK_FILE = os.path.join(BASE_DIR, "../utils/nse_symbols.csv")
+CHECK_FILE = os.path.normpath(CHECK_FILE)
+CSV_PATH = CHECK_FILE
 BATCH_SIZE = 150  # fetch in batches to avoid rate limit
 
 
@@ -116,7 +118,7 @@ def upsert_top_picks(conn, ranked_df, period, meta):
     cur.close()
 
 
-def main():
+def execute_picks():
     tickers = get_all_tickers()
     conn = psycopg2.connect(**DB_CONFIG)
     all_data = pd.DataFrame()
@@ -155,4 +157,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    execute_picks()
