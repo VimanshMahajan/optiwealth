@@ -4,8 +4,6 @@ package com.fin.optiwealth_backend_sb.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-
 import java.time.ZonedDateTime;
 
 @Entity
