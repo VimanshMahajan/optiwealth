@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { login } from "../services/authService";
+import "./Auth.css";
 
 const LoginPage: React.FC = () => {
     const [email, setEmail] = useState("");
@@ -19,54 +20,74 @@ const LoginPage: React.FC = () => {
             localStorage.setItem("token", resp.token);
             localStorage.setItem("user", JSON.stringify(resp.user));
             navigate("/dashboard");
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
             // Backend may return a message; fallback to generic
-            setError(err?.response?.data || err?.message || "Login failed");
+            const error = err as { response?: { data?: string }; message?: string };
+            setError(error?.response?.data || error?.message || "Login failed");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div style={{ maxWidth: 480, margin: "6rem auto", padding: 24 }}>
-            <h2>Login</h2>
-            <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: 12 }}>
-                    <label>Email</label>
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        style={{ width: "100%", padding: 8, marginTop: 6 }}
-                    />
-                </div>
-
-                <div style={{ marginBottom: 12 }}>
-                    <label>Password</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        style={{ width: "100%", padding: 8, marginTop: 6 }}
-                    />
-                </div>
-
-                {error && (
-                    <div style={{ color: "crimson", marginBottom: 12 }}>
-                        {typeof error === "string" ? error : JSON.stringify(error)}
+        <div className="auth-container">
+            <div className="auth-card">
+                <div className="auth-header">
+                    <div className="auth-logo">
+                        <div className="auth-logo-icon">OW</div>
                     </div>
-                )}
+                    <h1 className="auth-title">Welcome Back</h1>
+                    <p className="auth-subtitle">Sign in to optimize your portfolio</p>
+                </div>
 
-                <button type="submit" disabled={loading} style={{ padding: "8px 16px" }}>
-                    {loading ? "Logging in..." : "Login"}
-                </button>
-            </form>
+                <form onSubmit={handleSubmit} className="auth-form">
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="email">Email Address</label>
+                        <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            className="form-input"
+                            placeholder="your@email.com"
+                            disabled={loading}
+                        />
+                    </div>
 
-            <div style={{ marginTop: 16 }}>
-                <a href="/register">Register</a>
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="password">Password</label>
+                        <input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="form-input"
+                            placeholder="Enter your password"
+                            disabled={loading}
+                        />
+                    </div>
+
+                    {error && (
+                        <div className="error-message">
+                            {typeof error === "string" ? error : JSON.stringify(error)}
+                        </div>
+                    )}
+
+                    <button type="submit" disabled={loading} className="submit-button">
+                        {loading && <span className="spinner"></span>}
+                        {loading ? "Signing In..." : "Sign In"}
+                    </button>
+                </form>
+
+                <div className="auth-footer">
+                    <p className="auth-footer-text">Don't have an account?</p>
+                    <Link to="/register" className="auth-link">
+                        Create Account
+                    </Link>
+                </div>
             </div>
         </div>
     );

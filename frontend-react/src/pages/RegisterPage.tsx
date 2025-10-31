@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { register as registerApi } from "../services/authService";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import "./Auth.css";
 
 const RegisterPage: React.FC = () => {
     const [username, setUsername] = useState("");
@@ -17,34 +18,106 @@ const RegisterPage: React.FC = () => {
         try {
             await registerApi({ username, email, password });
             navigate("/login");
-        } catch (e: any) {
-            setErr(e?.response?.data || e?.message || "Register failed");
+        } catch (e: unknown) {
+            const error = e as { response?: { data?: string }; message?: string };
+            setErr(error?.response?.data || error?.message || "Register failed");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div style={{ maxWidth: 480, margin: "6rem auto", padding: 24 }}>
-            <h2>Register</h2>
-            <form onSubmit={handleRegister}>
-                <div style={{ marginBottom: 12 }}>
-                    <label>Username</label>
-                    <input value={username} onChange={(e) => setUsername(e.target.value)} required style={{ width: "100%", padding: 8, marginTop: 6 }} />
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                    <label>Email</label>
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ width: "100%", padding: 8, marginTop: 6 }} />
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                    <label>Password</label>
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ width: "100%", padding: 8, marginTop: 6 }} />
+        <div className="auth-container">
+            <div className="auth-card">
+                <div className="auth-header">
+                    <div className="auth-logo">
+                        <div className="auth-logo-icon">OW</div>
+                    </div>
+                    <h1 className="auth-title">Create Account</h1>
+                    <p className="auth-subtitle">Start optimizing your portfolio today</p>
                 </div>
 
-                {err && <div style={{ color: "crimson", marginBottom: 12 }}>{err}</div>}
+                <form onSubmit={handleRegister} className="auth-form">
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="username">Username</label>
+                        <input
+                            id="username"
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            className="form-input"
+                            placeholder="Choose a username"
+                            disabled={loading}
+                        />
+                    </div>
 
-                <button disabled={loading} type="submit">{loading ? "Creating..." : "Register"}</button>
-            </form>
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="email">Email Address</label>
+                        <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            className="form-input"
+                            placeholder="your@email.com"
+                            disabled={loading}
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="password">Password</label>
+                        <input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="form-input"
+                            placeholder="Create a strong password"
+                            disabled={loading}
+                        />
+                    </div>
+
+                    {err && (
+                        <div className="error-message">
+                            {err}
+                        </div>
+                    )}
+
+                    <button type="submit" disabled={loading} className="submit-button">
+                        {loading && <span className="spinner"></span>}
+                        {loading ? "Creating Account..." : "Create Account"}
+                    </button>
+                </form>
+
+                <div className="auth-features">
+                    <div className="feature-item">
+                        <span className="feature-icon">📊</span>
+                        <span>Portfolio Analytics</span>
+                    </div>
+                    <div className="feature-item">
+                        <span className="feature-icon">🎯</span>
+                        <span>Risk Optimization</span>
+                    </div>
+                    <div className="feature-item">
+                        <span className="feature-icon">📈</span>
+                        <span>Real-time Tracking</span>
+                    </div>
+                    <div className="feature-item">
+                        <span className="feature-icon">🔒</span>
+                        <span>Secure & Private</span>
+                    </div>
+                </div>
+
+                <div className="auth-footer">
+                    <p className="auth-footer-text">Already have an account?</p>
+                    <Link to="/login" className="auth-link">
+                        Sign In
+                    </Link>
+                </div>
+            </div>
         </div>
     );
 };
