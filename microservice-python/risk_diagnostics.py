@@ -107,7 +107,13 @@ def compute_risk_diagnostics(holdings):
 
     # Benchmark (NIFTY 50)
     benchmark_df = get_historical_data("^NSEI", str(start_date), str(end_date))
-    benchmark_returns = benchmark_df["Close"].pct_change().dropna() if not benchmark_df.empty else pd.Series()
+    if not benchmark_df.empty:
+        benchmark_close = benchmark_df["Close"]
+        if isinstance(benchmark_close, pd.DataFrame):
+            benchmark_close = benchmark_close.squeeze()
+        benchmark_returns = benchmark_close.pct_change().dropna()
+    else:
+        benchmark_returns = pd.Series()
 
     betas = {}
     for sym in holding_symbols:

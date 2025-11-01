@@ -16,26 +16,48 @@ export interface Holding {
 }
 
 export interface AnalyticsResult {
-    portfolio_metrics: {
-        total_value: number;
-        total_cost: number;
-        total_gain_loss: number;
-        total_gain_loss_pct: number;
+    portfolio: {
+        portfolioValue: number;
+        totalCost: number;
+        profit: number;
+        profitPercent: number;
+        sharpeRatio: number;
+        holdings: Array<{
+            symbol: string;
+            quantity: number;
+            avgCost: number;
+            currentPrice: number;
+            currentValue: number;
+            profit: number;
+            profitPercent: number;
+            currentPercent: number;
+            volatility?: number;
+            sharpeRatio?: number;
+            cumulativeReturn?: number;
+        }>;
     };
-    holdings: Array<{
-        symbol: string;
-        quantity: number;
-        avg_cost: number;
-        current_price: number;
-        current_value: number;
-        gain_loss: number;
-        gain_loss_pct: number;
-        weight: number;
-    }>;
-    risk_metrics?: {
-        portfolio_volatility: number;
-        sharpe_ratio: number;
-        max_drawdown: number;
+    riskMetrics?: {
+        portfolioVolatility?: number;
+        valueAtRisk95?: number;
+        conditionalVaR95?: number;
+        maxDrawdown?: number;
+        diversificationScore?: number;
+        betas?: { [key: string]: number | null };
+        correlationMatrix?: { [key: string]: { [key: string]: number } };
+    };
+    forecasts?: {
+        [symbol: string]: {
+            currentPrice?: number;
+            expectedReturn?: number;
+            trend?: string;
+            volatility?: number;
+            priceRange?: any;
+        };
+    };
+    optimization?: {
+        maxSharpe?: any;
+        minVolatility?: any;
+        portfolioCVaR95?: number;
     };
     ai_summary?: {
         summary?: string;

@@ -33,6 +33,22 @@ const PortfolioDetailPage: React.FC = () => {
         avgCost: "",
     });
 
+    // Collapsible sections state
+    const [expandedSections, setExpandedSections] = useState({
+        aiInsights: true,
+        riskMetrics: true,
+        forecasts: true,
+        optimization: true,
+        holdingsAnalysis: true,
+    });
+
+    const toggleSection = (section: keyof typeof expandedSections) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }));
+    };
+
     useEffect(() => {
         loadPortfolioData();
     }, [portfolioId]);
@@ -241,37 +257,87 @@ const PortfolioDetailPage: React.FC = () => {
                             <div className="analytics-card">
                                 <div className="analytics-label">Total Value</div>
                                 <div className="analytics-value">
-                                    ₹{analytics.portfolio_metrics.total_value.toFixed(2)}
+                                    ₹{analytics.portfolio?.portfolioValue?.toFixed(2) || '0.00'}
                                 </div>
                             </div>
                             <div className="analytics-card">
                                 <div className="analytics-label">Total Cost</div>
                                 <div className="analytics-value">
-                                    ₹{analytics.portfolio_metrics.total_cost.toFixed(2)}
+                                    ₹{analytics.portfolio?.totalCost?.toFixed(2) || '0.00'}
                                 </div>
                             </div>
                             <div className="analytics-card">
                                 <div className="analytics-label">Gain/Loss</div>
                                 <div
                                     className={`analytics-value ${
-                                        analytics.portfolio_metrics.total_gain_loss >= 0
+                                        (analytics.portfolio?.profit || 0) >= 0
                                             ? "positive"
                                             : "negative"
                                     }`}
                                 >
-                                    ₹{analytics.portfolio_metrics.total_gain_loss.toFixed(2)}
+                                    ₹{analytics.portfolio?.profit?.toFixed(2) || '0.00'}
                                     <span className="analytics-pct">
-                                        ({analytics.portfolio_metrics.total_gain_loss_pct.toFixed(2)}%)
+                                        ({analytics.portfolio?.profitPercent?.toFixed(2) || '0.00'}%)
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* AI Summary */}
+                        {/* AI Summary - Enhanced */}
                         {analytics.ai_summary && (
                             <div className="ai-summary-section">
-                                <h3 className="ai-title">🤖 AI Insights</h3>
-                                {analytics.ai_summary.summary && (
+                                <div className="collapsible-header" onClick={() => toggleSection('aiInsights')}>
+                                    <h3 className="ai-title">🤖 AI-Powered Insights</h3>
+                                    <button className="collapse-btn">
+                                        {expandedSections.aiInsights ? '▼' : '▶'}
+                                    </button>
+                                </div>
+
+                                {expandedSections.aiInsights && (
+                                <div className="collapsible-content">
+
+                                {/* Portfolio Summary */}
+                                {(analytics.ai_summary as any).portfolioSummary && (
+                                    <div className="ai-insight-card">
+                                        <h4 className="insight-heading">📊 Portfolio Summary</h4>
+                                        <p className="insight-text">{(analytics.ai_summary as any).portfolioSummary}</p>
+                                    </div>
+                                )}
+
+                                {/* Risk Analysis */}
+                                {(analytics.ai_summary as any).riskAnalysis && (
+                                    <div className="ai-insight-card">
+                                        <h4 className="insight-heading">⚠️ Risk Analysis</h4>
+                                        <p className="insight-text">{(analytics.ai_summary as any).riskAnalysis}</p>
+                                    </div>
+                                )}
+
+                                {/* Forecast Insights */}
+                                {(analytics.ai_summary as any).forecastInsights && (
+                                    <div className="ai-insight-card">
+                                        <h4 className="insight-heading">🔮 Market Forecast</h4>
+                                        <p className="insight-text">{(analytics.ai_summary as any).forecastInsights}</p>
+                                    </div>
+                                )}
+
+                                {/* Optimization Insights */}
+                                {(analytics.ai_summary as any).optimizationInsights && (
+                                    <div className="ai-insight-card">
+                                        <h4 className="insight-heading">⚡ Optimization Recommendations</h4>
+                                        <p className="insight-text">{(analytics.ai_summary as any).optimizationInsights}</p>
+                                    </div>
+                                )}
+
+                                {/* Conclusion */}
+                                {(analytics.ai_summary as any).summaryConclusion && (
+                                    <div className="ai-insight-card conclusion">
+                                        <h4 className="insight-heading">💡 Key Takeaways</h4>
+                                        <p className="insight-text">{(analytics.ai_summary as any).summaryConclusion}</p>
+                                    </div>
+                                )}
+
+                                {/* Legacy support for old format */}
+                                {analytics.ai_summary.summary && !(analytics.ai_summary as any).portfolioSummary && (
                                     <div className="ai-summary-box">
                                         <p>{analytics.ai_summary.summary}</p>
                                     </div>
@@ -286,13 +352,225 @@ const PortfolioDetailPage: React.FC = () => {
                                         </ul>
                                     </div>
                                 )}
+                                </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Risk Metrics Section */}
+                        {analytics.riskMetrics && (
+                            <div className="section">
+                                <div className="collapsible-header" onClick={() => toggleSection('riskMetrics')}>
+                                    <h2 className="section-title">📉 Risk Metrics</h2>
+                                    <button className="collapse-btn">
+                                        {expandedSections.riskMetrics ? '▼' : '▶'}
+                                    </button>
+                                </div>
+
+                                {expandedSections.riskMetrics && (
+                                <div className="collapsible-content">
+                                <div className="analytics-grid">
+                                    {analytics.riskMetrics.portfolioVolatility !== undefined && (
+                                        <div className="analytics-card">
+                                            <div className="analytics-label">Portfolio Volatility</div>
+                                            <div className="analytics-value">
+                                                {(analytics.riskMetrics.portfolioVolatility * 100).toFixed(2)}%
+                                            </div>
+                                        </div>
+                                    )}
+                                    {analytics.riskMetrics.valueAtRisk95 !== undefined && (
+                                        <div className="analytics-card">
+                                            <div className="analytics-label">Value at Risk (95%)</div>
+                                            <div className="analytics-value negative">
+                                                {(analytics.riskMetrics.valueAtRisk95 * 100).toFixed(2)}%
+                                            </div>
+                                        </div>
+                                    )}
+                                    {analytics.riskMetrics.maxDrawdown !== undefined && (
+                                        <div className="analytics-card">
+                                            <div className="analytics-label">Max Drawdown</div>
+                                            <div className="analytics-value negative">
+                                                {(analytics.riskMetrics.maxDrawdown * 100).toFixed(2)}%
+                                            </div>
+                                        </div>
+                                    )}
+                                    {analytics.riskMetrics.diversificationScore !== undefined && (
+                                        <div className="analytics-card">
+                                            <div className="analytics-label">Diversification Score</div>
+                                            <div className="analytics-value">
+                                                {analytics.riskMetrics.diversificationScore.toFixed(2)}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Beta Values */}
+                                {analytics.riskMetrics.betas && Object.keys(analytics.riskMetrics.betas).length > 0 && (
+                                    <div className="beta-section">
+                                        <h3 className="subsection-title">Beta vs Market (NIFTY 50)</h3>
+                                        <div className="beta-grid">
+                                            {Object.entries(analytics.riskMetrics.betas).map(([symbol, beta]) => (
+                                                <div key={symbol} className="beta-card">
+                                                    <div className="beta-symbol">{symbol.replace('.NS', '')}</div>
+                                                    <div className="beta-value">β = {beta?.toFixed(3) || 'N/A'}</div>
+                                                    <div className="beta-label">
+                                                        {beta && beta > 1 ? 'More volatile' : beta && beta < 1 ? 'Less volatile' : 'As volatile'} than market
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Forecasts Section */}
+                        {analytics.forecasts && Object.keys(analytics.forecasts).length > 0 && (
+                            <div className="section">
+                                <div className="collapsible-header" onClick={() => toggleSection('forecasts')}>
+                                    <h2 className="section-title">🔮 Market Forecasts</h2>
+                                    <button className="collapse-btn">
+                                        {expandedSections.forecasts ? '▼' : '▶'}
+                                    </button>
+                                </div>
+
+                                {expandedSections.forecasts && (
+                                <div className="collapsible-content">
+                                <div className="forecast-grid">
+                                    {Object.entries(analytics.forecasts).map(([symbol, forecast]) => (
+                                        <div key={symbol} className="forecast-card">
+                                            <div className="forecast-header">
+                                                <div className="forecast-symbol">{symbol.replace('.NS', '')}</div>
+                                                <div className={`forecast-trend ${forecast.trend}`}>
+                                                    {forecast.trend === 'up' ? '📈' : forecast.trend === 'down' ? '📉' : '➡️'} {forecast.trend?.toUpperCase()}
+                                                </div>
+                                            </div>
+                                            <div className="forecast-metrics">
+                                                <div className="forecast-item">
+                                                    <span className="forecast-label">Current:</span>
+                                                    <span className="forecast-value">₹{forecast.currentPrice?.toFixed(2)}</span>
+                                                </div>
+                                                <div className="forecast-item">
+                                                    <span className="forecast-label">Expected Return:</span>
+                                                    <span className={`forecast-value ${(forecast.expectedReturn || 0) >= 0 ? 'positive' : 'negative'}`}>
+                                                        {((forecast.expectedReturn || 0) * 100).toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                                <div className="forecast-item">
+                                                    <span className="forecast-label">Volatility:</span>
+                                                    <span className="forecast-value">
+                                                        {((forecast.volatility || 0) * 100).toFixed(2)}%
+                                                    </span>
+                                                </div>
+                                                {forecast.priceRange && Array.isArray(forecast.priceRange) && (
+                                                    <div className="forecast-item">
+                                                        <span className="forecast-label">Price Range:</span>
+                                                        <span className="forecast-value">
+                                                            {forecast.priceRange[0]?.toFixed(2)}% to {forecast.priceRange[1]?.toFixed(2)}%
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Optimization Section */}
+                        {analytics.optimization && (
+                            <div className="section">
+                                <div className="collapsible-header" onClick={() => toggleSection('optimization')}>
+                                    <h2 className="section-title">⚡ Portfolio Optimization</h2>
+                                    <button className="collapse-btn">
+                                        {expandedSections.optimization ? '▼' : '▶'}
+                                    </button>
+                                </div>
+
+                                {expandedSections.optimization && (
+                                <div className="collapsible-content">
+
+                                <div className="optimization-container">
+                                    {/* Max Sharpe */}
+                                    {analytics.optimization.maxSharpe && (
+                                        <div className="optimization-card">
+                                            <h3 className="optimization-heading">📊 Maximum Sharpe Ratio</h3>
+                                            <p className="optimization-desc">Best risk-adjusted returns</p>
+                                            <div className="weight-bars">
+                                                {Object.entries(analytics.optimization.maxSharpe).map(([symbol, weight]) => (
+                                                    <div key={symbol} className="weight-bar-container">
+                                                        <div className="weight-label">
+                                                            <span className="weight-symbol">{symbol.replace('.NS', '')}</span>
+                                                            <span className="weight-percent">{((weight as number) * 100).toFixed(2)}%</span>
+                                                        </div>
+                                                        <div className="weight-bar-bg">
+                                                            <div
+                                                                className="weight-bar-fill sharpe"
+                                                                style={{ width: `${(weight as number) * 100}%` }}
+                                                            ></div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Min Volatility */}
+                                    {analytics.optimization.minVolatility && (
+                                        <div className="optimization-card">
+                                            <h3 className="optimization-heading">🛡️ Minimum Volatility</h3>
+                                            <p className="optimization-desc">Lowest risk portfolio</p>
+                                            <div className="weight-bars">
+                                                {Object.entries(analytics.optimization.minVolatility).map(([symbol, weight]) => (
+                                                    <div key={symbol} className="weight-bar-container">
+                                                        <div className="weight-label">
+                                                            <span className="weight-symbol">{symbol.replace('.NS', '')}</span>
+                                                            <span className="weight-percent">{((weight as number) * 100).toFixed(2)}%</span>
+                                                        </div>
+                                                        <div className="weight-bar-bg">
+                                                            <div
+                                                                className="weight-bar-fill minvol"
+                                                                style={{ width: `${(weight as number) * 100}%` }}
+                                                            ></div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* CVaR */}
+                                    {analytics.optimization.portfolioCVaR95 !== undefined && (
+                                        <div className="optimization-card cvar">
+                                            <h3 className="optimization-heading">⚠️ Conditional VaR (95%)</h3>
+                                            <p className="optimization-desc">Potential loss in worst 5% scenarios</p>
+                                            <div className="cvar-value">
+                                                {(analytics.optimization.portfolioCVaR95 * 100).toFixed(2)}%
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                </div>
+                                )}
                             </div>
                         )}
 
                         {/* Holdings Details */}
-                        {analytics.holdings && analytics.holdings.length > 0 && (
+                        {analytics.portfolio?.holdings && analytics.portfolio.holdings.length > 0 && (
                             <div className="holdings-analytics">
-                                <h3 className="subsection-title">Detailed Holdings Analysis</h3>
+                                <div className="collapsible-header" onClick={() => toggleSection('holdingsAnalysis')}>
+                                    <h3 className="subsection-title">📈 Detailed Holdings Analysis</h3>
+                                    <button className="collapse-btn">
+                                        {expandedSections.holdingsAnalysis ? '▼' : '▶'}
+                                    </button>
+                                </div>
+
+                                {expandedSections.holdingsAnalysis && (
+                                <div className="collapsible-content">
                                 <div className="holdings-table-container">
                                     <table className="holdings-table">
                                         <thead>
@@ -305,27 +583,29 @@ const PortfolioDetailPage: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {analytics.holdings.map((holding, idx) => (
+                                            {analytics.portfolio.holdings.map((holding, idx) => (
                                                 <tr key={idx}>
                                                     <td className="symbol-cell">{holding.symbol}</td>
-                                                    <td>₹{holding.current_price.toFixed(2)}</td>
-                                                    <td>₹{holding.current_value.toFixed(2)}</td>
+                                                    <td>₹{holding.currentPrice?.toFixed(2) || '0.00'}</td>
+                                                    <td>₹{holding.currentValue?.toFixed(2) || '0.00'}</td>
                                                     <td
                                                         className={
-                                                            holding.gain_loss >= 0 ? "positive" : "negative"
+                                                            (holding.profit || 0) >= 0 ? "positive" : "negative"
                                                         }
                                                     >
-                                                        ₹{holding.gain_loss.toFixed(2)}
+                                                        ₹{holding.profit?.toFixed(2) || '0.00'}
                                                         <span className="small-pct">
-                                                            ({holding.gain_loss_pct.toFixed(2)}%)
+                                                            ({holding.profitPercent?.toFixed(2) || '0.00'}%)
                                                         </span>
                                                     </td>
-                                                    <td>{(holding.weight * 100).toFixed(2)}%</td>
+                                                    <td>{holding.currentPercent?.toFixed(2) || '0.00'}%</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
+                                </div>
+                                )}
                             </div>
                         )}
                     </div>

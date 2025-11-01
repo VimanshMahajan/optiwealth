@@ -111,19 +111,34 @@ def compute_metrics(historical_df: pd.DataFrame, risk_free_rate: float = 0.06):
             return None
 
         df = historical_df.copy()
-        df["Daily Return"] = df["Close"].pct_change()
-        df.dropna(inplace=True)
 
-        avg_return = df["Daily Return"].mean()
-        volatility = df["Daily Return"].std()
-        sharpe_ratio = (avg_return - (risk_free_rate / 252)) / volatility if volatility else None
-        cumulative_return = float(((df["Close"].squeeze().iloc[-1] / df["Close"].squeeze().iloc[0]) - 1))
+        # Ensure Close is a Series, not a DataFrame
+        close_series = df["Close"]
+        if isinstance(close_series, pd.DataFrame):
+            close_series = close_series.squeeze()
+
+        # Calculate daily returns
+        daily_returns = close_series.pct_change()
+        daily_returns = daily_returns.dropna()
+
+        if daily_returns.empty:
+            print("[Warning] No valid daily returns calculated.")
+            return None
+
+        avg_return = daily_returns.mean()
+        volatility = daily_returns.std()
+        sharpe_ratio = (avg_return - (risk_free_rate / 252)) / volatility if volatility and volatility != 0 else None
+
+        # Cumulative return
+        first_close = close_series.iloc[0]
+        last_close = close_series.iloc[-1]
+        cumulative_return = float((last_close / first_close) - 1) if first_close != 0 else 0
 
         return {
-            "averageDailyReturn": round(avg_return, 6),
-            "volatility": round(volatility, 6),
-            "sharpeRatio": round(sharpe_ratio, 4) if sharpe_ratio else None,
-            "cumulativeReturn": round(cumulative_return, 4)
+            "averageDailyReturn": round(float(avg_return), 6),
+            "volatility": round(float(volatility), 6),
+            "sharpeRatio": round(float(sharpe_ratio), 4) if sharpe_ratio else None,
+            "cumulativeReturn": round(float(cumulative_return), 4)
         }
     except Exception as e:
         print(f"[Error] Computing metrics: {e}")
