@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import MetricsExplainer from "../components/MetricsExplainer";
 import { getUserPortfolios, getTopPicks } from "../services/portfolioService";
 import type { Portfolio, TopPick } from "../services/portfolioService";
 import "./Dashboard.css";
@@ -10,6 +11,7 @@ const DashboardPage: React.FC = () => {
     const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
     const [topPicks, setTopPicks] = useState<TopPick[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showExplainer, setShowExplainer] = useState(false);
     const user = JSON.parse(localStorage.getItem("user") || "{}");
 
     useEffect(() => {
@@ -177,8 +179,24 @@ const DashboardPage: React.FC = () => {
                                     <span className="action-icon">📊</span>
                                     <span className="action-text">Analyze Portfolio</span>
                                 </button>
+                                <button
+                                    className="action-card"
+                                    onClick={() => setShowExplainer(!showExplainer)}
+                                >
+                                    <span className="action-icon">📚</span>
+                                    <span className="action-text">
+                                        {showExplainer ? 'Hide' : 'Learn'} Metrics
+                                    </span>
+                                </button>
                             </div>
                         </div>
+
+                        {/* Metrics Explainer Section */}
+                        {showExplainer && (
+                            <div className="section">
+                                <MetricsExplainer />
+                            </div>
+                        )}
                     </>
                 )}
             </div>
