@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 import json
 import threading
+import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from NLP_layer.gemini import generate_response
@@ -9,6 +10,9 @@ from report_generator import generate_portfolio_report
 from top_picks.top_picks import execute_picks
 
 app = Flask(__name__)
+
+# Global scheduler instance
+scheduler = None
 
 @app.route("/")
 def home():
@@ -68,26 +72,71 @@ def analyze_portfolio_route():
 
 # ==== Scheduler Setup ====
 
+def scheduled_job_wrapper():
+    """Wrapper for scheduled job with error handling and logging."""
+    print(f"[{datetime.now().isoformat()}] Scheduled Top Picks update starting...")
+    try:
+        execute_picks()
+        print(f"[{datetime.now().isoformat()}] Scheduled Top Picks update completed successfully.")
+    except Exception as e:
+        print(f"[{datetime.now().isoformat()}] ERROR in scheduled Top Picks update: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 def start_scheduler():
     """Starts a background scheduler that updates top picks daily."""
+    global scheduler
+
+    # Prevent duplicate scheduler in debug mode
+    if scheduler is not None:
+        print("Scheduler already running, skipping initialization.")
+        return
+
     scheduler = BackgroundScheduler()
 
     # Run once at startup
-    print("Initial Top Picks update running...")
+    print(f"[{datetime.now().isoformat()}] Initial Top Picks update running...")
     try:
         execute_picks()
+        print(f"[{datetime.now().isoformat()}] Initial Top Picks update completed.")
     except Exception as e:
-        print(f"Initial execution failed: {e}")
+        print(f"[{datetime.now().isoformat()}] Initial execution failed: {e}")
+        import traceback
+        traceback.print_exc()
 
     # Schedule daily updates (every 24 hours)
-    scheduler.add_job(execute_picks, 'interval', hours=24, id='daily_top_picks_job')
+    scheduler.add_job(
+        scheduled_job_wrapper,
+        'interval',
+        hours=24,
+        id='daily_top_picks_job',
+        replace_existing=True
+    )
     scheduler.start()
-    print("Scheduler started — Top Picks will update every 24 hours.")
+    print(f"[{datetime.now().isoformat()}] Scheduler started — Top Picks will update every 24 hours.")
+
+
+def shutdown_scheduler():
+    """Shutdown the scheduler gracefully."""
+    global scheduler
+    if scheduler is not None:
+        print(f"[{datetime.now().isoformat()}] Shutting down scheduler...")
+        scheduler.shutdown()
+        print(f"[{datetime.now().isoformat()}] Scheduler shut down successfully.")
+
+
+# Register cleanup function
+atexit.register(shutdown_scheduler)
 
 
 if __name__ == "__main__":
-    # Start the scheduler in a separate thread (non-blocking)
-    threading.Thread(target=start_scheduler, daemon=True).start()
+    # Only start scheduler if not in reloader process (fixes debug=True issue)
+    import os
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        start_scheduler()
 
     # Start Flask app
+    # Note: Consider setting debug=False in production
+
     app.run(host="0.0.0.0", port=8000, debug=True)
