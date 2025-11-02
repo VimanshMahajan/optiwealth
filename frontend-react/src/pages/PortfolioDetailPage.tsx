@@ -51,6 +51,15 @@ const PortfolioDetailPage: React.FC = () => {
 
     useEffect(() => {
         loadPortfolioData();
+        // Load cached analytics from sessionStorage
+        const cachedAnalytics = sessionStorage.getItem(`analytics_${portfolioId}`);
+        if (cachedAnalytics) {
+            try {
+                setAnalytics(JSON.parse(cachedAnalytics));
+            } catch (error) {
+                console.error("Error loading cached analytics:", error);
+            }
+        }
     }, [portfolioId]);
 
     const loadPortfolioData = async () => {
@@ -76,6 +85,8 @@ const PortfolioDetailPage: React.FC = () => {
             setAnalyzing(true);
             const result = await analyzePortfolio(portfolioId);
             setAnalytics(result);
+            // Cache the analytics result in sessionStorage
+            sessionStorage.setItem(`analytics_${portfolioId}`, JSON.stringify(result));
         } catch (error) {
             console.error("Error analyzing portfolio:", error);
             alert("Failed to analyze portfolio. Make sure you have holdings added.");
@@ -95,6 +106,9 @@ const PortfolioDetailPage: React.FC = () => {
             );
             setFormData({ symbol: "", quantity: "", avgCost: "" });
             setShowAddModal(false);
+            // Clear cached analytics since holdings changed
+            sessionStorage.removeItem(`analytics_${portfolioId}`);
+            setAnalytics(null);
             await loadPortfolioData();
         } catch (error) {
             console.error("Error adding holding:", error);
@@ -115,6 +129,9 @@ const PortfolioDetailPage: React.FC = () => {
             setShowEditModal(false);
             setEditingHolding(null);
             setFormData({ symbol: "", quantity: "", avgCost: "" });
+            // Clear cached analytics since holdings changed
+            sessionStorage.removeItem(`analytics_${portfolioId}`);
+            setAnalytics(null);
             await loadPortfolioData();
         } catch (error) {
             console.error("Error updating holding:", error);
@@ -127,6 +144,9 @@ const PortfolioDetailPage: React.FC = () => {
 
         try {
             await deleteHolding(holdingId);
+            // Clear cached analytics since holdings changed
+            sessionStorage.removeItem(`analytics_${portfolioId}`);
+            setAnalytics(null);
             await loadPortfolioData();
         } catch (error) {
             console.error("Error deleting holding:", error);
@@ -179,12 +199,24 @@ const PortfolioDetailPage: React.FC = () => {
                         <button className="btn-primary" onClick={() => setShowAddModal(true)}>
                             + Add Holding
                         </button>
+                        {analytics && (
+                            <button
+                                className="btn-secondary"
+                                onClick={() => {
+                                    sessionStorage.removeItem(`analytics_${portfolioId}`);
+                                    setAnalytics(null);
+                                }}
+                                title="Clear cached analysis"
+                            >
+                                🗑️ Clear Analysis
+                            </button>
+                        )}
                         <button
                             className="btn-analyze"
                             onClick={handleAnalyze}
                             disabled={analyzing || holdings.length === 0}
                         >
-                            {analyzing ? "Analyzing..." : "📊 Analyze Portfolio"}
+                            {analyzing ? "Analyzing..." : analytics ? "🔄 Re-Analyze Portfolio" : "📊 Analyze Portfolio"}
                         </button>
                     </div>
                 </div>
@@ -361,7 +393,16 @@ const PortfolioDetailPage: React.FC = () => {
                         {analytics.riskMetrics && (
                             <div className="section">
                                 <div className="collapsible-header" onClick={() => toggleSection('riskMetrics')}>
-                                    <h2 className="section-title">📉 Risk Metrics</h2>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <h2 className="section-title" style={{ marginBottom: 0 }}>📉 Risk Metrics</h2>
+                                        <span style={{
+                                            fontSize: '10px',
+                                            color: '#999',
+                                            fontWeight: 400
+                                        }}>
+                                            (1Y historical)
+                                        </span>
+                                    </div>
                                     <button className="collapse-btn">
                                         {expandedSections.riskMetrics ? '▼' : '▶'}
                                     </button>
@@ -430,7 +471,16 @@ const PortfolioDetailPage: React.FC = () => {
                         {analytics.forecasts && Object.keys(analytics.forecasts).length > 0 && (
                             <div className="section">
                                 <div className="collapsible-header" onClick={() => toggleSection('forecasts')}>
-                                    <h2 className="section-title">🔮 Market Forecasts</h2>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <h2 className="section-title" style={{ marginBottom: 0 }}>🔮 Market Forecasts</h2>
+                                        <span style={{
+                                            fontSize: '10px',
+                                            color: '#999',
+                                            fontWeight: 400
+                                        }}>
+                                            (30-day outlook)
+                                        </span>
+                                    </div>
                                     <button className="collapse-btn">
                                         {expandedSections.forecasts ? '▼' : '▶'}
                                     </button>
@@ -473,6 +523,16 @@ const PortfolioDetailPage: React.FC = () => {
                                                     </div>
                                                 )}
                                             </div>
+                                            <div style={{
+                                                marginTop: '12px',
+                                                paddingTop: '8px',
+                                                borderTop: '1px solid #f0f0f0',
+                                                fontSize: '10px',
+                                                color: '#999',
+                                                textAlign: 'center'
+                                            }}>
+                                                30-day forecast
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -485,7 +545,16 @@ const PortfolioDetailPage: React.FC = () => {
                         {analytics.optimization && (
                             <div className="section">
                                 <div className="collapsible-header" onClick={() => toggleSection('optimization')}>
-                                    <h2 className="section-title">⚡ Portfolio Optimization</h2>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <h2 className="section-title" style={{ marginBottom: 0 }}>⚡ Portfolio Optimization</h2>
+                                        <span style={{
+                                            fontSize: '10px',
+                                            color: '#999',
+                                            fontWeight: 400
+                                        }}>
+                                            (based on 1Y data)
+                                        </span>
+                                    </div>
                                     <button className="collapse-btn">
                                         {expandedSections.optimization ? '▼' : '▶'}
                                     </button>
