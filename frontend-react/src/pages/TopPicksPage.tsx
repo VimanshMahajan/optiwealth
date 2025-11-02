@@ -7,6 +7,7 @@ import "./TopPicks.css";
 const TopPicksPage: React.FC = () => {
     const [topPicks, setTopPicks] = useState<TopPick[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedPeriod, setSelectedPeriod] = useState<string>("ALL");
 
     useEffect(() => {
         loadTopPicks();
@@ -16,6 +17,14 @@ const TopPicksPage: React.FC = () => {
         try {
             setLoading(true);
             const data = await getTopPicks();
+            console.log("Received top picks data:", data);
+            console.log("Total picks:", data.length);
+            console.log("Period distribution:", {
+                "1M": data.filter(p => p.period === "1M").length,
+                "3M": data.filter(p => p.period === "3M").length,
+                "6M+": data.filter(p => p.period === "6M+").length,
+                "undefined": data.filter(p => !p.period).length
+            });
             // Sort by score descending
             const sorted = data.sort((a, b) => b.score - a.score);
             setTopPicks(sorted);
@@ -26,18 +35,39 @@ const TopPicksPage: React.FC = () => {
         }
     };
 
+    // Convert score to percentage (handles both 0-1 and 0-100 ranges)
+    const normalizeScore = (score: number): number => {
+        // If score is between 0 and 1, multiply by 100
+        // If score is already 0-100, use as is
+        return score <= 1 ? score * 100 : score;
+    };
+
     const getScoreColor = (score: number) => {
-        if (score >= 80) return "#4ade80";
-        if (score >= 60) return "#60a5fa";
-        if (score >= 40) return "#fbbf24";
+        const normalized = normalizeScore(score);
+        if (normalized >= 80) return "#4ade80";
+        if (normalized >= 60) return "#60a5fa";
+        if (normalized >= 40) return "#fbbf24";
         return "#f87171";
     };
 
     const getScoreLabel = (score: number) => {
-        if (score >= 80) return "Excellent";
-        if (score >= 60) return "Good";
-        if (score >= 40) return "Moderate";
+        const normalized = normalizeScore(score);
+        if (normalized >= 80) return "Excellent";
+        if (normalized >= 60) return "Good";
+        if (normalized >= 40) return "Moderate";
         return "Low";
+    };
+
+    // Filter picks by selected period
+    const filteredPicks = selectedPeriod === "ALL"
+        ? topPicks
+        : topPicks.filter(pick => pick.period === selectedPeriod);
+
+    // Get counts by period
+    const periodCounts = {
+        "1M": topPicks.filter(p => p.period === "1M").length,
+        "3M": topPicks.filter(p => p.period === "3M").length,
+        "6M+": topPicks.filter(p => p.period === "6M+").length,
     };
 
     return (
@@ -70,19 +100,49 @@ const TopPicksPage: React.FC = () => {
                     </div>
                 ) : (
                     <>
+                        {/* Period Filter Buttons */}
+                        <div className="period-filters">
+                            <button
+                                className={`period-btn ${selectedPeriod === "ALL" ? "active" : ""}`}
+                                onClick={() => setSelectedPeriod("ALL")}
+                            >
+                                All ({topPicks.length})
+                            </button>
+                            <button
+                                className={`period-btn ${selectedPeriod === "1M" ? "active" : ""}`}
+                                onClick={() => setSelectedPeriod("1M")}
+                            >
+                                1 Month ({periodCounts["1M"]})
+                            </button>
+                            <button
+                                className={`period-btn ${selectedPeriod === "3M" ? "active" : ""}`}
+                                onClick={() => setSelectedPeriod("3M")}
+                            >
+                                3 Months ({periodCounts["3M"]})
+                            </button>
+                            <button
+                                className={`period-btn ${selectedPeriod === "6M+" ? "active" : ""}`}
+                                onClick={() => setSelectedPeriod("6M+")}
+                            >
+                                6+ Months ({periodCounts["6M+"]})
+                            </button>
+                        </div>
+
                         <div className="top-picks-info">
                             <div className="info-card">
                                 <span className="info-icon">📊</span>
                                 <div>
-                                    <div className="info-value">{topPicks.length}</div>
-                                    <div className="info-label">Total Picks</div>
+                                    <div className="info-value">{filteredPicks.length}</div>
+                                    <div className="info-label">
+                                        {selectedPeriod === "ALL" ? "Total Picks" : `${selectedPeriod} Picks`}
+                                    </div>
                                 </div>
                             </div>
                             <div className="info-card">
                                 <span className="info-icon">🎯</span>
                                 <div>
                                     <div className="info-value">
-                                        {topPicks.filter((p) => p.score >= 80).length}
+                                        {filteredPicks.filter((p) => normalizeScore(p.score) >= 80).length}
                                     </div>
                                     <div className="info-label">High Confidence</div>
                                 </div>
@@ -97,7 +157,7 @@ const TopPicksPage: React.FC = () => {
                         </div>
 
                         <div className="top-picks-grid-large">
-                            {topPicks.map((pick, index) => (
+                            {filteredPicks.map((pick, index) => (
                                 <div key={pick.id} className="top-pick-card-large">
                                     <div className="pick-rank">#{index + 1}</div>
 
@@ -106,6 +166,7 @@ const TopPicksPage: React.FC = () => {
                                             {pick.symbol.replace('.NS', '')}
                                         </div>
                                         <div className="pick-nse-label">NSE</div>
+                                        <div className="pick-period-badge">{pick.period}</div>
                                     </div>
 
                                     <div className="pick-score-section">
@@ -114,7 +175,7 @@ const TopPicksPage: React.FC = () => {
                                             <div
                                                 className="pick-score-bar"
                                                 style={{
-                                                    width: `${pick.score}%`,
+                                                    width: `${normalizeScore(pick.score)}%`,
                                                     background: getScoreColor(pick.score),
                                                 }}
                                             ></div>
@@ -124,7 +185,7 @@ const TopPicksPage: React.FC = () => {
                                                 className="pick-score-value"
                                                 style={{ color: getScoreColor(pick.score) }}
                                             >
-                                                {pick.score.toFixed(1)}
+                                                {normalizeScore(pick.score).toFixed(1)}
                                             </span>
                                             <span
                                                 className="pick-score-badge"

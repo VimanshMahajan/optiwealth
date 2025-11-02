@@ -68,7 +68,14 @@ export interface AnalyticsResult {
 export interface TopPick {
     id: number;
     symbol: string;
+    companyName?: string;
+    sector?: string;
+    period: string; // "1M", "3M", "6M+"
+    lastPrice?: number;
+    expectedTarget?: number;
+    returnPercent?: number;
     score: number;
+    rationale?: string;
     lastUpdated: string;
 }
 

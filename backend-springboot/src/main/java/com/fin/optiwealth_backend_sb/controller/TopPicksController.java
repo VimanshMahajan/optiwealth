@@ -16,6 +16,14 @@ public class TopPicksController {
 
     @GetMapping
     public ResponseEntity<?> getLatestTopPicks() {
-        return ResponseEntity.ok(topPicksService.getLatestTopPicks());
+        var picks = topPicksService.getLatestTopPicks();
+        System.out.println("=== TOP PICKS RESPONSE ===");
+        System.out.println("Total picks: " + picks.size());
+        picks.forEach(pick -> System.out.println(
+            "Symbol: " + pick.getSymbol() +
+            ", Period: " + pick.getPeriod() +
+            ", Score: " + pick.getScore()
+        ));
+        return ResponseEntity.ok(picks);
     }
 }

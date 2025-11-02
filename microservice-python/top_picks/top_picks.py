@@ -95,18 +95,67 @@ def compute_scores(df):
     last_valid = last_prices[valid_mask]
     returns_valid = df_valid.pct_change(fill_method=None).dropna()
 
+    # === FACTOR 1: Total Return (Momentum) ===
     total_return = (last_valid / first_valid) - 1
     volatility = returns_valid.std()
 
-    # Handle division by zero - avoid inf values
-    # Use a small epsilon to prevent division by zero
-    score = total_return / (volatility + 1e-10)
+    # === FACTOR 2: Sharpe Ratio (Risk-Adjusted Returns) ===
+    risk_free_rate = 0.06 / 252  # ~6% annual, daily rate
+    sharpe_ratio = (returns_valid.mean() - risk_free_rate) / (volatility + 1e-10)
+
+    # === FACTOR 3: Win Rate (Consistency) ===
+    # Percentage of positive return days
+    win_rate = (returns_valid > 0).sum() / len(returns_valid)
+
+    # === FACTOR 4: Recent Strength (Weighted) ===
+    # Give more weight to recent performance (last 20% of period)
+    recent_window = max(5, len(df_valid) // 5)
+    recent_return = (df_valid.iloc[-1] / df_valid.iloc[-recent_window]) - 1
+
+    # === FACTOR 5: Drawdown Resilience ===
+    # Calculate max drawdown - lower is better (less negative)
+    cumulative = (1 + returns_valid).cumprod()
+    running_max = cumulative.cummax()
+    drawdown = (cumulative - running_max) / running_max
+    max_drawdown = drawdown.min()
+    # Convert to positive metric (recovery ability)
+    drawdown_score = 1 + max_drawdown  # closer to 1 is better
+
+    # === COMPOSITE SCORE ===
+    # Normalize each factor to 0-1 range within the batch
+    def normalize_factor(series):
+        """Min-max normalization"""
+        min_val = series.min()
+        max_val = series.max()
+        if max_val - min_val == 0:
+            return pd.Series([0.5] * len(series), index=series.index)
+        return (series - min_val) / (max_val - min_val)
+
+    # Normalize all factors
+    norm_return = normalize_factor(total_return)
+    norm_sharpe = normalize_factor(sharpe_ratio)
+    norm_win_rate = normalize_factor(win_rate)
+    norm_recent = normalize_factor(recent_return)
+    norm_drawdown = normalize_factor(drawdown_score)
+
+    # Weighted composite score (0 to 1 range)
+    composite_score = (
+        0.30 * norm_return +      # 30% - Total return (momentum)
+        0.25 * norm_sharpe +       # 25% - Risk-adjusted return
+        0.20 * norm_recent +       # 20% - Recent strength
+        0.15 * norm_win_rate +     # 15% - Consistency
+        0.10 * norm_drawdown       # 10% - Drawdown resilience
+    )
 
     results = pd.DataFrame({
         "symbol": df_valid.columns,
         "return": total_return.values,
         "volatility": volatility.values,
-        "score": score.values,
+        "sharpe_ratio": sharpe_ratio.values,
+        "win_rate": win_rate.values,
+        "recent_return": recent_return.values,
+        "max_drawdown": max_drawdown.values,
+        "score": composite_score.values,
         "last_price": last_valid.values
     })
 
@@ -141,7 +190,11 @@ def fetch_metadata(symbols):
     return meta
 
 
-def upsert_top_picks(conn, ranked_df, period, meta):
+def upsert_top_picks(conn, ranked_df, period, meta, batch_timestamp):
+    """
+    Upsert top picks with a shared timestamp to ensure all picks from the same run
+    have identical updated_at values (prevents millisecond differences).
+    """
     cur = conn.cursor()
     for _, row in ranked_df.iterrows():
         symbol_full = row["symbol"]
@@ -149,9 +202,19 @@ def upsert_top_picks(conn, ranked_df, period, meta):
         company_name = meta.get(symbol_full, {}).get("company_name", "N/A")
         sector = meta.get(symbol_full, {}).get("sector", "N/A")
 
+        # Build detailed rationale
+        sharpe = row.get('sharpe_ratio', 0)
+        win_rate = row.get('win_rate', 0)
+        rationale = (
+            f"Multi-factor score {row['score']:.2f}/1.0: "
+            f"{row['return']*100:.1f}% return, "
+            f"Sharpe {sharpe:.2f}, "
+            f"{win_rate*100:.0f}% win rate"
+        )
+
         cur.execute("""
             INSERT INTO top_picks (symbol, company_name, sector, period, last_price, expected_target, return_percent, score, rationale, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (symbol, period)
             DO UPDATE SET
                 company_name = EXCLUDED.company_name,
@@ -161,7 +224,7 @@ def upsert_top_picks(conn, ranked_df, period, meta):
                 return_percent = EXCLUDED.return_percent,
                 score = EXCLUDED.score,
                 rationale = EXCLUDED.rationale,
-                updated_at = now();
+                updated_at = EXCLUDED.updated_at;
         """, (
             symbol,
             company_name,
@@ -171,7 +234,8 @@ def upsert_top_picks(conn, ranked_df, period, meta):
             float(row["last_price"] * (1 + row["return"])),
             float(row["return"] * 100),
             float(row["score"]),
-            f"Momentum score {row['score']:.3f} from {row['return']*100:.2f}% returns"
+            rationale,
+            batch_timestamp  # Use shared timestamp instead of now()
         ))
     conn.commit()
     cur.close()
@@ -230,9 +294,15 @@ def execute_picks():
     print(f"\nFetching metadata for {len(all_top_symbols)} unique symbols...")
     meta = fetch_metadata(all_top_symbols)
 
-    # Insert into database
+    # Create a single timestamp for all picks in this batch
+    # This ensures all picks have the exact same updated_at value
+    from datetime import datetime, timezone
+    batch_timestamp = datetime.now(timezone.utc)
+    print(f"\nUsing batch timestamp: {batch_timestamp}")
+
+    # Insert into database with shared timestamp
     for label, ranked in [("1M", ranked_1M), ("3M", ranked_3M), ("6M+", ranked_6M)]:
-        upsert_top_picks(conn, ranked, label, meta)
+        upsert_top_picks(conn, ranked, label, meta, batch_timestamp)
         print(f"Top {len(ranked)} for {label} updated with metadata.")
 
     conn.close()

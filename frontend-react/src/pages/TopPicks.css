@@ -23,6 +23,39 @@
     cursor: not-allowed;
 }
 
+/* Period Filters */
+.period-filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.period-btn {
+    background: rgba(26, 26, 46, 0.6);
+    border: 2px solid rgba(100, 255, 218, 0.2);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.period-btn:hover {
+    background: rgba(100, 255, 218, 0.1);
+    border-color: rgba(100, 255, 218, 0.4);
+    transform: translateY(-2px);
+}
+
+.period-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
 .top-picks-info {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -140,6 +173,16 @@
     padding: 0.25rem 0.5rem;
     background: rgba(100, 255, 218, 0.1);
     border-radius: 4px;
+}
+
+.pick-period-badge {
+    font-size: 0.75rem;
+    color: white;
+    font-weight: 700;
+    padding: 0.3rem 0.6rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .pick-score-section {

@@ -8,10 +8,11 @@ import java.util.List;
 
 public interface TopPicksRepository extends JpaRepository<TopPick, Long> {
 
-    @Query(""" 
-        SELECT t FROM TopPick t\s
-        WHERE t.updatedAt = (SELECT MAX(tp.updatedAt) FROM TopPick tp)
-        """)
+    @Query(value = """
+        SELECT * FROM top_picks
+        WHERE updated_at >= (SELECT MAX(updated_at) FROM top_picks) - INTERVAL '1 minute'
+        ORDER BY score DESC
+        """, nativeQuery = true)
     List<TopPick> findLatestTopPicks();
 
 
