@@ -1,0 +1,113 @@
+.autocomplete-container {
+    position: relative;
+    width: 100%;
+}
+
+.autocomplete-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-height: 300px;
+    overflow: hidden;
+    z-index: 1000;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.autocomplete-info {
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 11px;
+    color: #666;
+    font-weight: 500;
+}
+
+.autocomplete-list {
+    max-height: 260px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.autocomplete-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.autocomplete-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.autocomplete-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.autocomplete-list::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+.autocomplete-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f5f5f5;
+    transition: all 0.15s ease;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.highlighted {
+    background: #f0f7ff;
+}
+
+.autocomplete-item.highlighted {
+    background: #e3f2fd;
+}
+
+.symbol-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-family: 'Courier New', monospace;
+}
+
+.symbol-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: #4285f4;
+    color: white;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .autocomplete-dropdown {
+        max-height: 250px;
+    }
+
+    .autocomplete-list {
+        max-height: 210px;
+    }
+}
+
