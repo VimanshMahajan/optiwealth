@@ -17,7 +17,7 @@ public class CorsConfig {
 
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
-                "https://optiwealth-9aeeahdge-vimansh-s-projects.vercel.app"
+                "https://optiwealth-drab.vercel.app"  // <-- updated to your new Vercel URL
         ));
 
         config.setAllowCredentials(true);
