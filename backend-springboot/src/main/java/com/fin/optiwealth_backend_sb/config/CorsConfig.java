@@ -15,15 +15,15 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allow the frontend origin
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "https://optiwealth-9aeeahdge-vimansh-s-projects.vercel.app"
+        ));
 
-        // Allow credentials (if you ever send cookies, JWT headers, etc.)
         config.setAllowCredentials(true);
-
-        // Allow all headers and methods
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
+        config.addAllowedMethod("OPTIONS");
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
