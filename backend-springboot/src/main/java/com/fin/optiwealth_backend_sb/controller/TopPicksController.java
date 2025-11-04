@@ -1,6 +1,6 @@
 package com.fin.optiwealth_backend_sb.controller;
 
-import com.fin.optiwealth_backend_sb.security.TopPicksService;
+import com.fin.optiwealth_backend_sb.service.TopPicksService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

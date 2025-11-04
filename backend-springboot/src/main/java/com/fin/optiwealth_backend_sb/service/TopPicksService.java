@@ -1,4 +1,4 @@
-package com.fin.optiwealth_backend_sb.security;
+package com.fin.optiwealth_backend_sb.service;
 
 import com.fin.optiwealth_backend_sb.entity.TopPick;
 import com.fin.optiwealth_backend_sb.repository.TopPicksRepository;
