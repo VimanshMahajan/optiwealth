@@ -6,7 +6,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
-import java.util.List;
+import java.util.Arrays;
 
 @Configuration
 public class CorsConfig {
@@ -15,15 +15,15 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "https://optiwealth-drab.vercel.app"  // <-- updated to your new Vercel URL
+        // Allow Vercel frontend and localhost (for testing)
+        config.setAllowedOriginPatterns(Arrays.asList(
+                "https://optiwealth-drab.vercel.app",
+                "http://localhost:*"
         ));
 
-        config.setAllowCredentials(true);
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
-        config.addAllowedMethod("OPTIONS");
+        config.setAllowCredentials(true);          // allow cookies / JWT headers
+        config.setAllowedHeaders(Arrays.asList("*"));  // allow all headers
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // explicitly list methods
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
