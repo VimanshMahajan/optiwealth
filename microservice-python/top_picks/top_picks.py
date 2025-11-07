@@ -25,8 +25,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CHECK_FILE = os.path.join(BASE_DIR, "../utils/nse_symbols.csv")
 CHECK_FILE = os.path.normpath(CHECK_FILE)
 CSV_PATH = CHECK_FILE
-BATCH_SIZE = 25  # Reduced batch size to avoid rate limits
-RETRY_ATTEMPTS = 3
+BATCH_SIZE = 1  # Reduced batch size to avoid rate limits
+RETRY_ATTEMPTS = 2
 RETRY_DELAY = 3  # seconds
 
 # Create a session with proper headers to avoid rate limiting
