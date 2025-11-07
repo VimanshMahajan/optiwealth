@@ -129,14 +129,14 @@ def shutdown_scheduler():
 # Register cleanup function
 atexit.register(shutdown_scheduler)
 
-
 if __name__ == "__main__":
-    # Only start scheduler if not in reloader process (fixes debug=True issue)
     import os
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    # Start scheduler safely
+    try:
         start_scheduler()
+    except Exception as e:
+        print(f"Scheduler startup failed: {e}")
 
-    # Start Flask app
-    # Note: Consider setting debug=False in production
-
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    # Run the Flask app
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port, debug=False)
