@@ -1,18 +1,33 @@
+# Python
+__pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-*.egg-info/
-dist/
-build/
-
-# Environment
-.env
-.venv
-venv/
 env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# IDE
+# Environment variables
+.env
+.env.local
+
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -23,9 +38,16 @@ env/
 .DS_Store
 Thumbs.db
 
-# Project specific
-*.csv
+# Logs
 *.log
-# Python
-__pycache__/
 
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Cache
+.cache/
