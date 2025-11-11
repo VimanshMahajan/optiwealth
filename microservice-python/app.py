@@ -84,7 +84,9 @@ def analyze_portfolio_route():
 
     except Exception as e:
         print(f"Error in /analyze-portfolio: {e}")
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e), "details": traceback.format_exc()}), 500
 
 
 # ==== Scheduler Setup ====
