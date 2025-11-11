@@ -28,11 +28,14 @@ public class SecurityConfig {
                     var corsConfig = new org.springframework.web.cors.CorsConfiguration();
                     corsConfig.setAllowedOriginPatterns(java.util.List.of(
                             "https://optiwealth-drab.vercel.app",
+                            "https://*.vercel.app",
                             "http://localhost:*"
                     ));
-                    corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                     corsConfig.setAllowedHeaders(java.util.List.of("*"));
                     corsConfig.setAllowCredentials(true);
+                    corsConfig.setExposedHeaders(java.util.List.of("Authorization", "Content-Type"));
+                    corsConfig.setMaxAge(3600L);
                     return corsConfig;
                 }))
                 .csrf(csrf -> csrf.disable())

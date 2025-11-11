@@ -5,6 +5,7 @@ import com.fin.optiwealth_backend_sb.entity.Portfolio;
 import com.fin.optiwealth_backend_sb.repository.AppUserRepository;
 import com.fin.optiwealth_backend_sb.repository.PortfolioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -18,7 +19,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AnalyticsService {
 
-    private final WebClient webClient = WebClient.create("http://localhost:8000");
+    @Value("${microservice.python.url}")
+    private String pythonMicroserviceUrl;
+
     private final AppUserRepository appUserRepository;
     private final PortfolioRepository portfolioRepository;
 
@@ -56,7 +59,8 @@ public class AnalyticsService {
                     ))
                     .collect(Collectors.toList()));
 
-            return webClient.post()
+            return WebClient.create(pythonMicroserviceUrl)
+                    .post()
                     .uri("/analyze-portfolio")
                     .bodyValue(request)
                     .retrieve()
