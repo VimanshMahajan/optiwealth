@@ -21,25 +21,6 @@ public class AnalyticsController {
 
     @GetMapping("/{portfolioId}/analyze")
     public ResponseEntity<?> analyzePortfolio(@PathVariable Long portfolioId) {
-        // ...existing code...
-    }
-
-    @GetMapping("/{portfolioId}/check")
-    public ResponseEntity<?> checkPortfolio(@PathVariable Long portfolioId) {
-        try {
-            log.info("Checking portfolio ID: {}", portfolioId);
-            Map<String, Object> status = analyticsService.checkPortfolioStatus(portfolioId);
-            return ResponseEntity.ok(status);
-        } catch (Exception e) {
-            log.error("Error checking portfolio {}: {}", portfolioId, e.getMessage(), e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            error.put("portfolioId", portfolioId.toString());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
-    }
-
-}
         try {
             log.info("Received request to analyze portfolio ID: {}", portfolioId);
             Map<String, Object> result = analyticsService.analyzePortfolio(portfolioId);
@@ -78,6 +59,21 @@ public class AnalyticsController {
             error.put("portfolioId", portfolioId.toString());
             error.put("timestamp", java.time.LocalDateTime.now().toString());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/{portfolioId}/check")
+    public ResponseEntity<?> checkPortfolio(@PathVariable Long portfolioId) {
+        try {
+            log.info("Checking portfolio ID: {}", portfolioId);
+            Map<String, Object> status = analyticsService.checkPortfolioStatus(portfolioId);
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            log.error("Error checking portfolio {}: {}", portfolioId, e.getMessage(), e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            error.put("portfolioId", portfolioId.toString());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
     }
 
