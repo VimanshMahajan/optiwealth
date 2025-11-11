@@ -7,12 +7,16 @@ import com.fin.optiwealth_backend_sb.repository.PortfolioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.netty.http.client.HttpClient;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,6 +31,15 @@ public class AnalyticsService {
 
     private final AppUserRepository appUserRepository;
     private final PortfolioRepository portfolioRepository;
+
+    private WebClient createWebClientWithTimeout() {
+        HttpClient httpClient = HttpClient.create()
+                .responseTimeout(Duration.ofSeconds(60));  // 60 second timeout
+
+        return WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
+    }
 
     private AppUser getCurrentUser() {
         try {
@@ -91,10 +104,10 @@ public class AnalyticsService {
             log.info("Sending request to Python microservice at: {}/analyze-portfolio", pythonMicroserviceUrl);
             log.debug("Request payload: {}", request);
 
-            // Call Python microservice
-            Map<String, Object> response = WebClient.create(pythonMicroserviceUrl)
+            // Call Python microservice with timeout
+            Map<String, Object> response = createWebClientWithTimeout()
                     .post()
-                    .uri("/analyze-portfolio")
+                    .uri(pythonMicroserviceUrl + "/analyze-portfolio")
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(Map.class)
@@ -106,12 +119,28 @@ public class AnalyticsService {
         } catch (WebClientResponseException e) {
             log.error("Python microservice returned error. Status: {}, Body: {}",
                      e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RuntimeException("Python microservice error: " + e.getResponseBodyAsString(), e);
+
+            String errorMessage;
+            if (e.getStatusCode() == HttpStatus.BAD_GATEWAY || e.getStatusCode() == HttpStatus.GATEWAY_TIMEOUT) {
+                errorMessage = "Analysis service is temporarily unavailable or taking too long. This may be due to high load or network issues. Please try again in a few moments.";
+            } else if (e.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE) {
+                errorMessage = "Analysis service is currently unavailable. Please try again later.";
+            } else {
+                errorMessage = "Error from analysis service: " + e.getResponseBodyAsString();
+            }
+
+            throw new RuntimeException(errorMessage, e);
         } catch (RuntimeException e) {
             log.error("Runtime error analyzing portfolio {}: {}", portfolioId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
             log.error("Unexpected error analyzing portfolio {}: {}", portfolioId, e.getMessage(), e);
+
+            // Check if it's a timeout
+            if (e.getMessage() != null && (e.getMessage().contains("timeout") || e.getMessage().contains("timed out"))) {
+                throw new RuntimeException("Analysis request timed out. The portfolio analysis is taking longer than expected. Please try again or reduce the number of holdings.", e);
+            }
+
             throw new RuntimeException("Unexpected error occurred: " + e.getMessage(), e);
         }
     }
