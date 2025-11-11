@@ -16,12 +16,15 @@ app = Flask(__name__)
 CORS(app, resources={
     r"/*": {
         "origins": [
+            "https://optiwealth-drab.vercel.app",
             "https://optiwealth-backend.onrender.com",
             "http://localhost:8080",
-            "http://localhost:8000"
+            "http://localhost:8000",
+            "http://localhost:5173"
         ],
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
     }
 })
 

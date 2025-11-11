@@ -4,9 +4,17 @@ import psycopg2
 import time
 from dotenv import load_dotenv
 import os
-import requests
 from json import JSONDecodeError
 import logging
+
+# Use curl_cffi instead of requests for yfinance
+try:
+    from curl_cffi import requests as curl_requests
+    USE_CURL_CFFI = True
+except ImportError:
+    import requests as curl_requests
+    USE_CURL_CFFI = False
+    logging.warning("curl_cffi not installed, falling back to requests (may cause Yahoo API errors)")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
@@ -30,14 +38,18 @@ RETRY_ATTEMPTS = 2
 RETRY_DELAY = 3  # seconds
 
 # Create a session with proper headers to avoid rate limiting
-session = requests.Session()
-session.headers.update({
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Accept": "application/json, text/html, */*",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive"
-})
+# Use curl_cffi session for yfinance compatibility
+session = curl_requests.Session()
+if USE_CURL_CFFI:
+    logger.info("Using curl_cffi session for yfinance (recommended)")
+else:
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept": "application/json, text/html, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive"
+    })
 
 
 def get_all_tickers():
@@ -234,6 +246,45 @@ def compute_scores(df):
     return results.sort_values("score", ascending=False)
 
 
+def ensure_unique_constraint(conn):
+    """
+    Ensure the top_picks table has a unique constraint on (symbol, period).
+    This is required for ON CONFLICT (symbol, period) to work.
+    """
+    try:
+        cur = conn.cursor()
+        # Check if constraint already exists
+        cur.execute("""
+            SELECT constraint_name
+            FROM information_schema.table_constraints
+            WHERE table_name = 'top_picks'
+            AND constraint_type = 'UNIQUE'
+            AND constraint_name = 'top_picks_symbol_period_key';
+        """)
+
+        if cur.fetchone() is None:
+            # Constraint doesn't exist, create it
+            logger.info("Creating unique constraint on (symbol, period)...")
+            cur.execute("""
+                ALTER TABLE top_picks
+                ADD CONSTRAINT top_picks_symbol_period_key
+                UNIQUE (symbol, period);
+            """)
+            conn.commit()
+            logger.info("✓ Unique constraint created successfully")
+        else:
+            logger.debug("Unique constraint already exists")
+
+        cur.close()
+    except psycopg2.errors.UniqueViolation:
+        # Constraint already exists, this is fine
+        conn.rollback()
+        logger.debug("Unique constraint already exists (caught exception)")
+    except Exception as e:
+        conn.rollback()
+        logger.warning(f"Could not create unique constraint (may already exist): {e}")
+
+
 def fetch_metadata(symbols):
     """
     Fetch company name and sector for given symbols with robust error handling.
@@ -359,6 +410,10 @@ def execute_picks():
         logger.info(f"Starting top picks execution for {len(tickers)} tickers")
 
         conn = psycopg2.connect(**DB_CONFIG)
+
+        # Ensure unique constraint exists before any upsert operations
+        ensure_unique_constraint(conn)
+
         all_data = pd.DataFrame()
 
         # Fetch in batches with progress tracking

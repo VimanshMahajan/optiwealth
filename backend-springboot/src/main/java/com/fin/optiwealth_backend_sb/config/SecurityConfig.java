@@ -29,7 +29,8 @@ public class SecurityConfig {
                     corsConfig.setAllowedOriginPatterns(java.util.List.of(
                             "https://optiwealth-drab.vercel.app",
                             "https://*.vercel.app",
-                            "http://localhost:*"
+                            "http://localhost:*",
+                            "http://localhost:5173"
                     ));
                     corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                     corsConfig.setAllowedHeaders(java.util.List.of("*"));
@@ -40,7 +41,7 @@ public class SecurityConfig {
                 }))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/**", "/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

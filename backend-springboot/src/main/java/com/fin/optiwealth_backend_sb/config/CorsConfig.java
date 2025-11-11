@@ -19,7 +19,8 @@ public class CorsConfig {
         config.setAllowedOriginPatterns(Arrays.asList(
                 "https://optiwealth-drab.vercel.app",
                 "https://*.vercel.app",
-                "http://localhost:*"
+                "http://localhost:*",
+                "http://localhost:5173"
         ));
 
         config.setAllowCredentials(true);          // allow cookies / JWT headers
