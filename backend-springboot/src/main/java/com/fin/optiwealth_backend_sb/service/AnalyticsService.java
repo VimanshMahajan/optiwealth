@@ -46,22 +46,35 @@ public class AnalyticsService {
         try {
             log.info("Analyzing portfolio with ID: {}", portfolioId);
 
+            // Get current authenticated user
             AppUser user = getCurrentUser();
-            log.info("Current user: {}", user.getEmail());
+            log.info("Current user: {} (ID: {})", user.getEmail(), user.getId());
 
-            Portfolio portfolio = portfolioRepository.findById(portfolioId)
-                    .orElseThrow(() -> new RuntimeException("Portfolio not found with ID: " + portfolioId));
+            // Fetch portfolio with holdings eagerly loaded
+            Portfolio portfolio = portfolioRepository.findByIdWithHoldings(portfolioId)
+                    .orElseThrow(() -> {
+                        log.error("Portfolio not found with ID: {}", portfolioId);
+                        return new RuntimeException("Portfolio not found with ID: " + portfolioId);
+                    });
 
+            log.info("Portfolio found: {} (Owner ID: {})", portfolio.getName(), portfolio.getUser().getId());
+
+            // Check ownership
             if (!portfolio.getUser().getId().equals(user.getId())) {
+                log.error("Unauthorized access attempt. User {} trying to access portfolio {} owned by {}",
+                         user.getId(), portfolioId, portfolio.getUser().getId());
                 throw new RuntimeException("Unauthorized: You do not own this portfolio");
             }
 
+            // Check if portfolio has holdings
             if (portfolio.getHoldings() == null || portfolio.getHoldings().isEmpty()) {
-                throw new RuntimeException("Portfolio has no holdings to analyze");
+                log.error("Portfolio {} has no holdings to analyze", portfolioId);
+                throw new RuntimeException("Portfolio has no holdings to analyze. Please add stocks to your portfolio first.");
             }
 
-            log.info("Portfolio found with {} holdings", portfolio.getHoldings().size());
+            log.info("Portfolio has {} holdings", portfolio.getHoldings().size());
 
+            // Build request payload
             Map<String, Object> request = new HashMap<>();
             request.put("portfolioId", portfolio.getId());
             request.put("holdings", portfolio.getHoldings().stream()
@@ -70,13 +83,15 @@ public class AnalyticsService {
                         holding.put("symbol", h.getSymbol());
                         holding.put("quantity", h.getQuantity().doubleValue());
                         holding.put("avgCost", h.getAvgCost().doubleValue());
+                        log.debug("Adding holding: {} x {} @ {}", h.getSymbol(), h.getQuantity(), h.getAvgCost());
                         return holding;
                     })
                     .collect(Collectors.toList()));
 
-            log.info("Sending request to Python microservice at: {}", pythonMicroserviceUrl);
+            log.info("Sending request to Python microservice at: {}/analyze-portfolio", pythonMicroserviceUrl);
             log.debug("Request payload: {}", request);
 
+            // Call Python microservice
             Map<String, Object> response = WebClient.create(pythonMicroserviceUrl)
                     .post()
                     .uri("/analyze-portfolio")
@@ -93,11 +108,48 @@ public class AnalyticsService {
                      e.getStatusCode(), e.getResponseBodyAsString());
             throw new RuntimeException("Python microservice error: " + e.getResponseBodyAsString(), e);
         } catch (RuntimeException e) {
-            log.error("Runtime error analyzing portfolio: {}", e.getMessage(), e);
+            log.error("Runtime error analyzing portfolio {}: {}", portfolioId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error analyzing portfolio: {}", e.getMessage(), e);
+            log.error("Unexpected error analyzing portfolio {}: {}", portfolioId, e.getMessage(), e);
             throw new RuntimeException("Unexpected error occurred: " + e.getMessage(), e);
+        }
+    }
+
+    public Map<String, Object> checkPortfolioStatus(Long portfolioId) {
+        try {
+            log.info("Checking status of portfolio ID: {}", portfolioId);
+
+            AppUser user = getCurrentUser();
+
+            Portfolio portfolio = portfolioRepository.findByIdWithHoldings(portfolioId)
+                    .orElseThrow(() -> new RuntimeException("Portfolio not found with ID: " + portfolioId));
+
+            Map<String, Object> status = new HashMap<>();
+            status.put("portfolioId", portfolio.getId());
+            status.put("portfolioName", portfolio.getName());
+            status.put("ownerId", portfolio.getUser().getId());
+            status.put("currentUserId", user.getId());
+            status.put("isOwner", portfolio.getUser().getId().equals(user.getId()));
+            status.put("holdingsCount", portfolio.getHoldings() != null ? portfolio.getHoldings().size() : 0);
+            status.put("canAnalyze", portfolio.getHoldings() != null && !portfolio.getHoldings().isEmpty());
+
+            if (portfolio.getHoldings() != null && !portfolio.getHoldings().isEmpty()) {
+                status.put("holdings", portfolio.getHoldings().stream()
+                        .map(h -> {
+                            Map<String, Object> holding = new HashMap<>();
+                            holding.put("symbol", h.getSymbol());
+                            holding.put("quantity", h.getQuantity());
+                            holding.put("avgCost", h.getAvgCost());
+                            return holding;
+                        })
+                        .collect(Collectors.toList()));
+            }
+
+            return status;
+        } catch (Exception e) {
+            log.error("Error checking portfolio status: {}", e.getMessage(), e);
+            throw new RuntimeException("Error checking portfolio: " + e.getMessage(), e);
         }
     }
 }
