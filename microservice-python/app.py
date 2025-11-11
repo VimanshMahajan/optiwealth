@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from datetime import datetime
 import json
 import threading
@@ -10,6 +11,19 @@ from report_generator import generate_portfolio_report
 from top_picks.top_picks import execute_picks
 
 app = Flask(__name__)
+
+# Enable CORS for all routes
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "https://optiwealth-backend.onrender.com",
+            "http://localhost:8080",
+            "http://localhost:8000"
+        ],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Global scheduler instance
 scheduler = None
