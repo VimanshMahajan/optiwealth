@@ -4,6 +4,21 @@ import psycopg2
 import time
 from dotenv import load_dotenv
 import os
+from json import JSONDecodeError
+import logging
+
+# Use curl_cffi instead of requests for yfinance
+try:
+    from curl_cffi import requests as curl_requests
+    USE_CURL_CFFI = True
+except ImportError:
+    import requests as curl_requests
+    USE_CURL_CFFI = False
+    logging.warning("curl_cffi not installed, falling back to requests (may cause Yahoo API errors)")
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -18,7 +33,23 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CHECK_FILE = os.path.join(BASE_DIR, "../utils/nse_symbols.csv")
 CHECK_FILE = os.path.normpath(CHECK_FILE)
 CSV_PATH = CHECK_FILE
-BATCH_SIZE = 150  # fetch in batches to avoid rate limit
+BATCH_SIZE = 150  # Reduced batch size to avoid rate limits
+RETRY_ATTEMPTS = 2
+RETRY_DELAY = 3  # seconds
+
+# Create a session with proper headers to avoid rate limiting
+# Use curl_cffi session for yfinance compatibility
+session = curl_requests.Session()
+if USE_CURL_CFFI:
+    logger.info("Using curl_cffi session for yfinance (recommended)")
+else:
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept": "application/json, text/html, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive"
+    })
 
 
 def get_all_tickers():
@@ -28,52 +59,95 @@ def get_all_tickers():
 
 
 def fetch_batch(tickers):
-    print(f"Fetching {len(tickers)} tickers...")
-    data = yf.download(tickers, period="6mo", interval="1d", group_by="ticker", auto_adjust=True, progress=False)
+    """
+    Fetch historical data with robust error handling and retries.
+    Returns a DataFrame with price data, skipping failed tickers.
+    """
+    logger.info(f"Fetching {len(tickers)} tickers...")
 
-    print(f"  Downloaded data shape: {data.shape}")
-    print(f"  Column structure: {type(data.columns)}")
+    for attempt in range(1, RETRY_ATTEMPTS + 1):
+        try:
+            # Use yfinance with progress disabled and threads=True for better handling
+            data = yf.download(
+                tickers,
+                period="6mo",
+                interval="1d",
+                group_by="ticker",
+                auto_adjust=True,
+                progress=False,
+                threads=True,
+                ignore_tz=True,
+                timeout=30
+            )
 
-    # Handle multi-index or flat columns
-    if isinstance(data.columns, pd.MultiIndex):
-        print(f"  Multi-index columns. Levels: {data.columns.names}")
-        if ("Adj Close" in data.columns.get_level_values(1)):
-            data = data.xs("Adj Close", axis=1, level=1)
-        elif ("Close" in data.columns.get_level_values(1)):
-            data = data.xs("Close", axis=1, level=1)
-        else:
-            raise ValueError(f"Neither 'Adj Close' nor 'Close' found in columns: {data.columns}")
-    elif "Adj Close" in data.columns:
-        data = data["Adj Close"]
-    elif "Close" in data.columns:
-        data = data["Close"]
-    else:
-        raise ValueError(f"Unexpected columns: {data.columns}")
+            if data.empty:
+                logger.warning(f"  Attempt {attempt}/{RETRY_ATTEMPTS}: No data returned")
+                if attempt < RETRY_ATTEMPTS:
+                    time.sleep(RETRY_DELAY * attempt)
+                    continue
+                else:
+                    return pd.DataFrame()
 
-    print(f"  After extraction: {data.shape}")
-    print(f"  Non-null columns: {data.notna().any().sum()}")
+            logger.info(f"  Downloaded data shape: {data.shape}")
 
-    return data
+            # Handle multi-index or flat columns
+            if isinstance(data.columns, pd.MultiIndex):
+                logger.info(f"  Multi-index columns. Levels: {data.columns.names}")
+                if "Adj Close" in data.columns.get_level_values(1):
+                    data = data.xs("Adj Close", axis=1, level=1)
+                elif "Close" in data.columns.get_level_values(1):
+                    data = data.xs("Close", axis=1, level=1)
+                else:
+                    logger.error(f"Neither 'Adj Close' nor 'Close' found in columns")
+                    if attempt < RETRY_ATTEMPTS:
+                        time.sleep(RETRY_DELAY * attempt)
+                        continue
+                    return pd.DataFrame()
+            elif "Adj Close" in data.columns:
+                data = data["Adj Close"]
+            elif "Close" in data.columns:
+                data = data["Close"]
+            else:
+                logger.error(f"Unexpected columns: {data.columns}")
+                if attempt < RETRY_ATTEMPTS:
+                    time.sleep(RETRY_DELAY * attempt)
+                    continue
+                return pd.DataFrame()
+
+            logger.info(f"  After extraction: {data.shape}")
+            logger.info(f"  Non-null columns: {data.notna().any().sum()}")
+
+            return data
+
+        except Exception as e:
+            logger.error(f"  Attempt {attempt}/{RETRY_ATTEMPTS} failed: {str(e)}")
+            if attempt < RETRY_ATTEMPTS:
+                time.sleep(RETRY_DELAY * attempt)
+            else:
+                logger.error(f"  All retry attempts exhausted for batch")
+                return pd.DataFrame()
+
+    return pd.DataFrame()
 
 
 def compute_scores(df):
     if df.empty or len(df.columns) == 0:
-        print("Warning: Empty dataframe passed to compute_scores")
-        return pd.DataFrame(columns=["symbol", "return", "volatility", "score", "last_price"])
+        logger.warning("Empty dataframe passed to compute_scores")
+        return pd.DataFrame(columns=["symbol", "return", "volatility", "sharpe_ratio", "win_rate", "recent_return", "max_drawdown", "score", "last_price"])
 
-    print(f"  Input shape: {df.shape}")
-    print(f"  Columns with all NaN: {df.isna().all().sum()}")
-    print(f"  Columns with any NaN: {df.isna().any().sum()}")
+    logger.info(f"  Input shape: {df.shape}")
+    logger.info(f"  Columns with all NaN: {df.isna().all().sum()}")
+    logger.info(f"  Columns with any NaN: {df.isna().any().sum()}")
 
     # Drop columns that are entirely NaN
     df_clean = df.dropna(axis=1, how='all')
-    print(f"  After dropping all-NaN columns: {df_clean.shape[1]} stocks")
+    logger.info(f"  After dropping all-NaN columns: {df_clean.shape[1]} stocks")
 
     if df_clean.empty or len(df_clean.columns) == 0:
-        print("  Warning: All columns were NaN")
-        return pd.DataFrame(columns=["symbol", "return", "volatility", "score", "last_price"])
+        logger.warning("  All columns were NaN")
+        return pd.DataFrame(columns=["symbol", "return", "volatility", "sharpe_ratio", "win_rate", "recent_return", "max_drawdown", "score", "last_price"])
 
-    # Fix FutureWarning by specifying fill_method=None
+    # Calculate returns with fill_method=None to avoid FutureWarning
     returns = df_clean.pct_change(fill_method=None).dropna()
 
     # Calculate metrics - need valid first and last prices
@@ -83,11 +157,11 @@ def compute_scores(df):
     # Only calculate for stocks with valid first and last prices
     valid_mask = ~(first_prices.isna() | last_prices.isna() | (first_prices == 0))
 
-    print(f"  Stocks with valid first/last prices: {valid_mask.sum()}")
+    logger.info(f"  Stocks with valid first/last prices: {valid_mask.sum()}/{len(valid_mask)}")
 
     if valid_mask.sum() == 0:
-        print("  Warning: No stocks have valid first and last prices")
-        return pd.DataFrame(columns=["symbol", "return", "volatility", "score", "last_price"])
+        logger.warning("  No stocks have valid first and last prices")
+        return pd.DataFrame(columns=["symbol", "return", "volatility", "sharpe_ratio", "win_rate", "recent_return", "max_drawdown", "score", "last_price"])
 
     # Filter to valid stocks only
     df_valid = df_clean.loc[:, valid_mask]
@@ -167,26 +241,111 @@ def compute_scores(df):
 
     filtered_count = initial_count - len(results)
     if filtered_count > 0:
-        print(f"  Filtered out {filtered_count} stocks due to NaN/inf values (kept {len(results)})")
+        logger.info(f"  Filtered out {filtered_count} stocks due to NaN/inf values (kept {len(results)})")
 
     return results.sort_values("score", ascending=False)
 
 
-def fetch_metadata(symbols):
-    """Fetch company name and sector for given symbols (usually ~15)."""
-    meta = {}
-    for sym in symbols:
-        try:
-            info = yf.Ticker(sym).info
-            meta[sym] = {
-                "company_name": info.get("longName", "N/A"),
-                "sector": info.get("sector", "N/A")
-            }
+def ensure_unique_constraint(conn):
+    """
+    Ensure the top_picks table has a unique constraint on (symbol, period).
+    This is required for ON CONFLICT (symbol, period) to work.
+    """
+    try:
+        cur = conn.cursor()
+        # Check if constraint already exists
+        cur.execute("""
+            SELECT constraint_name
+            FROM information_schema.table_constraints
+            WHERE table_name = 'top_picks'
+            AND constraint_type = 'UNIQUE'
+            AND constraint_name = 'top_picks_symbol_period_key';
+        """)
 
-        except Exception as e:
-            meta[sym] = {"company_name": "N/A", "sector": "N/A"}
-            print(f"Metadata fetch failed for {sym}: {e}")
-        time.sleep(0.5)
+        if cur.fetchone() is None:
+            # Constraint doesn't exist, create it
+            logger.info("Creating unique constraint on (symbol, period)...")
+            cur.execute("""
+                ALTER TABLE top_picks
+                ADD CONSTRAINT top_picks_symbol_period_key
+                UNIQUE (symbol, period);
+            """)
+            conn.commit()
+            logger.info("✓ Unique constraint created successfully")
+        else:
+            logger.debug("Unique constraint already exists")
+
+        cur.close()
+    except psycopg2.errors.UniqueViolation:
+        # Constraint already exists, this is fine
+        conn.rollback()
+        logger.debug("Unique constraint already exists (caught exception)")
+    except Exception as e:
+        conn.rollback()
+        logger.warning(f"Could not create unique constraint (may already exist): {e}")
+
+
+def fetch_metadata(symbols):
+    """
+    Fetch company name and sector for given symbols with robust error handling.
+    Handles rate limits, JSON decode errors, and network issues gracefully.
+    """
+    meta = {}
+    failed_symbols = []
+
+    logger.info(f"Fetching metadata for {len(symbols)} symbols...")
+
+    for idx, sym in enumerate(symbols, 1):
+        for attempt in range(1, RETRY_ATTEMPTS + 1):
+            try:
+                # Add delay to avoid rate limiting (longer delay every 5 symbols)
+                if idx > 1:
+                    delay = 1.0 if idx % 5 != 0 else 2.0
+                    time.sleep(delay)
+
+                ticker = yf.Ticker(sym, session=session)
+                info = ticker.info
+
+                # Validate that we got actual data (not empty or error response)
+                if not info or len(info) == 0:
+                    raise ValueError(f"Empty info response for {sym}")
+
+                # Check if we got an HTML error page or rate limit response
+                if 'trailingPegRatio' not in info and 'longName' not in info and 'shortName' not in info:
+                    # Likely got rate limited or error response
+                    raise ValueError(f"Invalid info structure for {sym} - possible rate limit")
+
+                meta[sym] = {
+                    "company_name": info.get("longName") or info.get("shortName") or "N/A",
+                    "sector": info.get("sector", "N/A")
+                }
+
+                logger.debug(f"  [{idx}/{len(symbols)}] {sym}: {meta[sym]['company_name']}")
+                break  # Success, exit retry loop
+
+            except JSONDecodeError as e:
+                logger.warning(f"  [{idx}/{len(symbols)}] {sym} - JSON decode error (attempt {attempt}/{RETRY_ATTEMPTS}): {str(e)[:100]}")
+                if attempt < RETRY_ATTEMPTS:
+                    time.sleep(RETRY_DELAY * attempt)  # Exponential backoff
+                else:
+                    # Final attempt failed, use fallback
+                    meta[sym] = {"company_name": sym.replace(".NS", ""), "sector": "N/A"}
+                    failed_symbols.append(sym)
+
+            except Exception as e:
+                error_msg = str(e)[:100]
+                logger.warning(f"  [{idx}/{len(symbols)}] {sym} - Error (attempt {attempt}/{RETRY_ATTEMPTS}): {error_msg}")
+                if attempt < RETRY_ATTEMPTS:
+                    time.sleep(RETRY_DELAY * attempt)
+                else:
+                    # Final attempt failed, use fallback
+                    meta[sym] = {"company_name": sym.replace(".NS", ""), "sector": "N/A"}
+                    failed_symbols.append(sym)
+
+    if failed_symbols:
+        logger.warning(f"Failed to fetch metadata for {len(failed_symbols)} symbols (using fallback): {failed_symbols[:5]}")
+
+    logger.info(f"Metadata fetch complete: {len(meta) - len(failed_symbols)}/{len(symbols)} successful")
     return meta
 
 
@@ -242,71 +401,117 @@ def upsert_top_picks(conn, ranked_df, period, meta, batch_timestamp):
 
 
 def execute_picks():
-    tickers = get_all_tickers()
-    print(f"Total tickers to fetch: {len(tickers)}")
-    conn = psycopg2.connect(**DB_CONFIG)
-    all_data = pd.DataFrame()
+    """
+    Main execution function with comprehensive error handling.
+    Fetches stock data, computes scores, and updates database.
+    """
+    try:
+        tickers = get_all_tickers()
+        logger.info(f"Starting top picks execution for {len(tickers)} tickers")
 
-    # Fetch in batches
-    for i in range(0, len(tickers), BATCH_SIZE):
-        batch = tickers[i:i+BATCH_SIZE]
-        try:
-            df = fetch_batch(batch)
-            all_data = pd.concat([all_data, df], axis=1)
-            print(f"Batch {i//BATCH_SIZE + 1}: Fetched {len(df.columns)} symbols, total so far: {len(all_data.columns)}")
-        except Exception as e:
-            print(f"Batch {i} failed: {e}")
-        time.sleep(2)
+        conn = psycopg2.connect(**DB_CONFIG)
 
-    print(f"\nTotal data collected: {all_data.shape[0]} rows x {all_data.shape[1]} columns")
-    if not all_data.empty:
-        print(f"Date range: {all_data.index[0]} to {all_data.index[-1]}")
+        # Ensure unique constraint exists before any upsert operations
+        ensure_unique_constraint(conn)
 
-    # Derive sub-periods
-    one_month = all_data.tail(22)
-    three_month = all_data.tail(66)
-    six_month = all_data
+        all_data = pd.DataFrame()
 
-    print(f"\nPeriod data shapes:")
-    print(f"1 Month: {one_month.shape[0]} rows x {one_month.shape[1]} columns")
-    print(f"3 Month: {three_month.shape[0]} rows x {three_month.shape[1]} columns")
-    print(f"6 Month: {six_month.shape[0]} rows x {six_month.shape[1]} columns")
+        # Fetch in batches with progress tracking
+        total_batches = (len(tickers) + BATCH_SIZE - 1) // BATCH_SIZE
+        successful_batches = 0
 
-    # Compute top 5 for each period
-    print("\nComputing scores for each period...")
-    ranked_1M = compute_scores(one_month).head(5)
-    ranked_3M = compute_scores(three_month).head(5)
-    ranked_6M = compute_scores(six_month).head(5)
+        for i in range(0, len(tickers), BATCH_SIZE):
+            batch_num = i // BATCH_SIZE + 1
+            batch = tickers[i:i+BATCH_SIZE]
 
-    print(f"\nRanked results:")
-    print(f"1M top picks: {len(ranked_1M)}")
-    if len(ranked_1M) > 0:
-        print(f"  Top 1M stock: {ranked_1M.iloc[0]['symbol']} (score: {ranked_1M.iloc[0]['score']:.2f})")
-    print(f"3M top picks: {len(ranked_3M)}")
-    if len(ranked_3M) > 0:
-        print(f"  Top 3M stock: {ranked_3M.iloc[0]['symbol']} (score: {ranked_3M.iloc[0]['score']:.2f})")
-    print(f"6M top picks: {len(ranked_6M)}")
-    if len(ranked_6M) > 0:
-        print(f"  Top 6M stock: {ranked_6M.iloc[0]['symbol']} (score: {ranked_6M.iloc[0]['score']:.2f})")
+            logger.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} symbols)")
 
-    # Gather all unique top symbols
-    all_top_symbols = pd.concat([ranked_1M, ranked_3M, ranked_6M])["symbol"].unique()
-    print(f"\nFetching metadata for {len(all_top_symbols)} unique symbols...")
-    meta = fetch_metadata(all_top_symbols)
+            try:
+                df = fetch_batch(batch)
+                if not df.empty and len(df.columns) > 0:
+                    all_data = pd.concat([all_data, df], axis=1)
+                    successful_batches += 1
+                    logger.info(f"  Batch {batch_num} success: {len(df.columns)} symbols, cumulative: {len(all_data.columns)}")
+                else:
+                    logger.warning(f"  Batch {batch_num} returned no data")
+            except Exception as e:
+                logger.error(f"  Batch {batch_num} failed: {e}")
 
-    # Create a single timestamp for all picks in this batch
-    # This ensures all picks have the exact same updated_at value
-    from datetime import datetime, timezone
-    batch_timestamp = datetime.now(timezone.utc)
-    print(f"\nUsing batch timestamp: {batch_timestamp}")
+            # Add delay between batches to avoid rate limiting
+            if batch_num < total_batches:
+                time.sleep(3)
 
-    # Insert into database with shared timestamp
-    for label, ranked in [("1M", ranked_1M), ("3M", ranked_3M), ("6M+", ranked_6M)]:
-        upsert_top_picks(conn, ranked, label, meta, batch_timestamp)
-        print(f"Top {len(ranked)} for {label} updated with metadata.")
+        logger.info(f"\n{'='*60}")
+        logger.info(f"Data collection complete: {successful_batches}/{total_batches} batches successful")
+        logger.info(f"Total data: {all_data.shape[0]} rows x {all_data.shape[1]} columns")
 
-    conn.close()
-    print("All top picks updated successfully.")
+        if all_data.empty or len(all_data.columns) == 0:
+            logger.error("CRITICAL: No data collected. Cannot compute top picks.")
+            conn.close()
+            return
+
+        logger.info(f"Date range: {all_data.index[0]} to {all_data.index[-1]}")
+        logger.info(f"{'='*60}\n")
+
+        # Derive sub-periods
+        one_month = all_data.tail(22) if len(all_data) >= 22 else all_data
+        three_month = all_data.tail(66) if len(all_data) >= 66 else all_data
+        six_month = all_data
+
+        logger.info("Period data shapes:")
+        logger.info(f"  1 Month: {one_month.shape[0]} rows x {one_month.shape[1]} columns")
+        logger.info(f"  3 Month: {three_month.shape[0]} rows x {three_month.shape[1]} columns")
+        logger.info(f"  6 Month: {six_month.shape[0]} rows x {six_month.shape[1]} columns")
+
+        # Compute top 5 for each period
+        logger.info("\nComputing scores for each period...")
+        ranked_1M = compute_scores(one_month).head(5)
+        ranked_3M = compute_scores(three_month).head(5)
+        ranked_6M = compute_scores(six_month).head(5)
+
+        logger.info(f"\nRanked results:")
+        logger.info(f"  1M top picks: {len(ranked_1M)}")
+        if len(ranked_1M) > 0:
+            logger.info(f"    Top: {ranked_1M.iloc[0]['symbol']} (score: {ranked_1M.iloc[0]['score']:.3f})")
+        logger.info(f"  3M top picks: {len(ranked_3M)}")
+        if len(ranked_3M) > 0:
+            logger.info(f"    Top: {ranked_3M.iloc[0]['symbol']} (score: {ranked_3M.iloc[0]['score']:.3f})")
+        logger.info(f"  6M top picks: {len(ranked_6M)}")
+        if len(ranked_6M) > 0:
+            logger.info(f"    Top: {ranked_6M.iloc[0]['symbol']} (score: {ranked_6M.iloc[0]['score']:.3f})")
+
+        # Check if we have any valid picks
+        if len(ranked_1M) == 0 and len(ranked_3M) == 0 and len(ranked_6M) == 0:
+            logger.error("CRITICAL: No valid picks generated for any period!")
+            conn.close()
+            return
+
+        # Gather all unique top symbols
+        all_top_symbols = pd.concat([ranked_1M, ranked_3M, ranked_6M])["symbol"].unique()
+        logger.info(f"\nFetching metadata for {len(all_top_symbols)} unique symbols...")
+        meta = fetch_metadata(all_top_symbols)
+
+        # Create a single timestamp for all picks in this batch
+        from datetime import datetime, timezone
+        batch_timestamp = datetime.now(timezone.utc)
+        logger.info(f"Using batch timestamp: {batch_timestamp}")
+
+        # Insert into database with shared timestamp
+        for label, ranked in [("1M", ranked_1M), ("3M", ranked_3M), ("6M+", ranked_6M)]:
+            if len(ranked) > 0:
+                upsert_top_picks(conn, ranked, label, meta, batch_timestamp)
+                logger.info(f"  ✓ Top {len(ranked)} for {label} updated with metadata")
+            else:
+                logger.warning(f"  ⚠ No picks to update for {label}")
+
+        conn.close()
+        logger.info("✓ All top picks updated successfully")
+
+    except Exception as e:
+        logger.error(f"CRITICAL ERROR in execute_picks: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 if __name__ == "__main__":

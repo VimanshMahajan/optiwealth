@@ -2,6 +2,14 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 
+# Use curl_cffi session for yfinance to avoid API errors
+try:
+    from curl_cffi import requests as curl_requests
+    YF_SESSION = curl_requests.Session()
+except ImportError:
+    YF_SESSION = None
+    print("[Warning] curl_cffi not installed, yfinance may experience API errors")
+
 # ---------------------------
 # Fetch Current Quote
 # ---------------------------
@@ -10,7 +18,7 @@ def get_current_quote(symbol: str):
     Fetch current market data for a stock.
     """
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=YF_SESSION) if YF_SESSION else yf.Ticker(symbol)
         data = ticker.history(period="1d", auto_adjust=True)
         fast_info = ticker.fast_info  # faster and more stable than .info
 
@@ -75,7 +83,7 @@ def get_fundamentals(symbol: str):
     (Using 'info' — slower but more complete)
     """
     try:
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol, session=YF_SESSION) if YF_SESSION else yf.Ticker(symbol)
         info = ticker.info or {}
 
         fundamentals = {

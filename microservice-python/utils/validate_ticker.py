@@ -3,13 +3,22 @@ import pandas as pd
 from tqdm import tqdm
 import time
 
+# Use curl_cffi session for yfinance to avoid API errors
+try:
+    from curl_cffi import requests as curl_requests
+    YF_SESSION = curl_requests.Session()
+except ImportError:
+    YF_SESSION = None
+    print("[Warning] curl_cffi not installed, yfinance may experience API errors")
+
 CSV_PATH = "nse_symbols.csv"
 OUTPUT_PATH = "valid_nse_symbols.csv"
 
 
 def is_valid_ticker(symbol):
     try:
-        data = yf.Ticker(symbol).info
+        ticker = yf.Ticker(symbol, session=YF_SESSION) if YF_SESSION else yf.Ticker(symbol)
+        data = ticker.info
         # If 'regularMarketPrice' or similar key exists, it's valid
         return "regularMarketPrice" in data
     except Exception:

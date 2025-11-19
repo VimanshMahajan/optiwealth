@@ -12,7 +12,9 @@ def forecast_arima(series: pd.Series, steps: int = 30) -> pd.Series:
     """
     series = series.dropna().reset_index(drop=True)
 
-    std_val = float(series.std(skipna=True)) if not series.empty else 0.0
+    # Fix FutureWarning: std() returns a scalar, not a Series
+    std_val = series.std(skipna=True) if not series.empty else 0.0
+    std_val = float(std_val) if not pd.isna(std_val) else 0.0
 
     if len(series) < 20 or std_val < 1e-9:
         print(f"[ARIMA Warning] Insufficient or constant data — returning NaNs.")
@@ -34,7 +36,9 @@ def forecast_garch(series: pd.Series, steps: int = 30) -> np.ndarray:
     Returns an array of forecasted volatility values.
     """
     series = series.dropna().reset_index(drop=True)
-    std_val = float(series.std(skipna=True)) if not series.empty else 0.0
+    # Fix FutureWarning: std() returns a scalar, not a Series
+    std_val = series.std(skipna=True) if not series.empty else 0.0
+    std_val = float(std_val) if not pd.isna(std_val) else 0.0
 
     if len(series) < 20 or std_val < 1e-9:
         print(f"[GARCH Warning] Insufficient or constant data — returning NaNs.")
@@ -85,10 +89,16 @@ def summarize_forecast(symbol: str, df: pd.DataFrame, steps: int = 30, sims: int
     # Run forecasts
     arima_fc = forecast_arima(returns, steps)
     garch_vol = forecast_garch(returns, steps)
+
+    # Fix FutureWarning: Use scalar values directly, not float() on Series
+    current_price = df["Close"].iloc[-1]
+    mu = returns.mean(skipna=True)
+    sigma = returns.std(skipna=True)
+
     mc_paths = monte_carlo_simulation(
-        current_price=float(df["Close"].iloc[-1]),
-        mu=float(returns.mean(skipna=True)),
-        sigma=float(returns.std(skipna=True)),
+        current_price=float(current_price),
+        mu=float(mu),
+        sigma=float(sigma),
         steps=steps,
         sims=sims
     )
@@ -106,13 +116,13 @@ def summarize_forecast(symbol: str, df: pd.DataFrame, steps: int = 30, sims: int
     price_mean = float(np.nanmean(final_prices))
     price_min = float(np.nanmin(final_prices))
     price_max = float(np.nanmax(final_prices))
-    current_price = float(df["Close"].iloc[-1])
-    pct_change_range = [round((price_min - current_price) / current_price * 100, 2),
-                        round((price_max - current_price) / current_price * 100, 2)]
+    # Use the already extracted current_price scalar
+    pct_change_range = [round((price_min - float(current_price)) / float(current_price) * 100, 2),
+                        round((price_max - float(current_price)) / float(current_price) * 100, 2)]
 
     return {
         "symbol": symbol,
-        "currentPrice": round(current_price, 2),
+        "currentPrice": round(float(current_price), 2),
         "forecast": {
             "expectedReturn": round(arima_mean, 6),
             "trendDirection": "up" if arima_mean > 0 else "down" if arima_mean < 0 else "flat",

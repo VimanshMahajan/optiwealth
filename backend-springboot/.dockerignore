@@ -1,0 +1,39 @@
+# Ignore target directory (built artifacts)
+target/
+
+# Ignore IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore logs
+*.log
+
+# Ignore temporary files
+*.tmp
+*.swp
+*~
+
+# Ignore test coverage reports
+coverage/
+
+# Ignore Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Ignore documentation
+README.md
+docs/
+

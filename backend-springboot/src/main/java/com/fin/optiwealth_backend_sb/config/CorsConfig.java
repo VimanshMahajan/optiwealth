@@ -6,7 +6,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
-import java.util.List;
+import java.util.Arrays;
 
 @Configuration
 public class CorsConfig {
@@ -15,15 +15,19 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(List.of(
+        // Allow Vercel frontend and localhost (for testing)
+        config.setAllowedOriginPatterns(Arrays.asList(
+                "https://optiwealth-drab.vercel.app",
+                "https://*.vercel.app",
                 "http://localhost:*",
-                "https://optiwealth-drab.vercel.app"  // <-- updated to your new Vercel URL
+                "http://localhost:5173"
         ));
 
-        config.setAllowCredentials(true);
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
-        config.addAllowedMethod("OPTIONS");
+        config.setAllowCredentials(true);          // allow cookies / JWT headers
+        config.setAllowedHeaders(Arrays.asList("*"));  // allow all headers
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")); // explicitly list methods
+        config.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        config.setMaxAge(3600L); // Cache preflight response for 1 hour
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
