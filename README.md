@@ -1,60 +1,62 @@
 # OptiWealth
 
-Advanced portfolio management & analytics platform combining a Spring Boot backend, a Python quantitative analytics microservice, and a modern React frontend.
+Advanced portfolio management & analytics platform combining a Spring Boot backend, a Python quantitative analytics microservice, and a React + Vite frontend.
 
 ## Documentation
-- Getting started & local setup: see `RUNNING.md`
-- System & design overview: see `ARCHITECTURE.md`
+- Setup & run: `RUNNING.md`
+- System design: `ARCHITECTURE.md`
 
-## Core Capabilities
-- Portfolio CRUD & multi-portfolio support
-- Secure authentication (JWT-based)
-- Descriptive analytics (P&L, returns, Sharpe, volatility)
-- Risk diagnostics (VaR, CVaR, beta, drawdown, diversification)
-- Forecasting (ARIMA price trends, GARCH volatility, Monte Carlo simulation)
-- Optimization (efficient frontier simulation, max Sharpe, min volatility, CVaR estimation)
-- AI summaries (Gemini-generated narrative insights)
-- Scheduled jobs (daily Top Picks refresh)
+## Features
+- Portfolio management (multiple portfolios, holdings, P&L)
+- JWT authentication
+- Descriptive analytics (returns, volatility, Sharpe ratio, cumulative return)
+- Risk diagnostics (VaR, CVaR, beta, max drawdown, diversification score)
+- Forecasting (ARIMA price trend, GARCH volatility, Monte Carlo price paths)
+- Optimization (efficient frontier simulation, max Sharpe, min volatility, CVaR estimate)
+- AI narrative summaries (Gemini)
+- Scheduled daily job for top picks (APSheduler)
 
 ## Technology Stack
 - Backend: Spring Boot 3 (Java 17), Spring Security, Spring Data JPA (PostgreSQL)
 - Analytics Microservice: Python (Flask, pandas, numpy, statsmodels, arch, yfinance, APScheduler, google-genai)
-- Frontend: React + Vite + TypeScript
-- Persistence: PostgreSQL (dev), extensible to other RDBMS
+- Frontend: React, TypeScript, Vite
+- Database: PostgreSQL
 
-## High-Level Architecture
-Frontend ↔ Backend ↔ Python Analytics ↔ Market Data (yFinance)
+## Architecture Overview
+Frontend ↔ Backend ↔ Python Analytics ↔ Market Data
 
-The backend orchestrates analytics requests and persists domain entities. Heavy quantitative work is offloaded to the Python service for isolation and scalability.
+Backend persists domain data and forwards analytics requests. Python microservice performs quantitative computations and returns structured JSON enriched with an AI summary.
 
-## Example Analytics Flow
-1. User submits holdings in UI.
-2. Backend validates & forwards to Python `/analyze-portfolio`.
-3. Python service computes descriptive metrics, risk, forecasts, optimization, and AI summary.
-4. Consolidated JSON returned to backend → served to frontend.
+## Analytics Flow
+1. User submits holdings in the frontend.
+2. Backend validates request and user auth.
+3. Backend POSTs to Python `/analyze-portfolio`.
+4. Python service computes metrics, risk, forecasts, optimization, AI summary.
+5. Consolidated JSON returns to backend and is delivered to frontend.
 
-## Security & Config
-Secrets and environment-specific values are excluded from version control. Use:
-- `application-local.properties` for backend overrides (based on example file)
-- `.env` in `microservice-python/` for `GOOGLE_API_KEY`
-- Optional `.env` for frontend (e.g., `VITE_API_BASE`)
+## Configuration
+Secrets and environment-specific values are not committed.
+- Backend: `application-local.properties` based on example file.
+- Python: `.env` with `GOOGLE_API_KEY`.
+- Frontend: optional `.env` (e.g. `VITE_API_BASE`).
 
-## Development Quick Start (Summary)
-- Start Python microservice (port 8000) → `python controller.py`
-- Start backend (port 8080) → `./mvnw spring-boot:run`
-- Start frontend (port 5173) → `npm run dev`
-
-Details including troubleshooting are in `RUNNING.md`.
-
-## Future Enhancements (Selected)
-- Containerization (Docker Compose)
-- Caching layer (Redis) for market data
-- Async job processing for heavy simulations
-- Expanded test suite (pytest, integration tests)
-- Observability (metrics, tracing, structured logs)
+## Quick Start
+Backend (port 8080):
+```bash
+./mvnw spring-boot:run
+```
+Python microservice (port 8000):
+```bash
+python microservice-python/controller.py
+```
+Frontend (port 5173):
+```bash
+cd frontend-react
+npm install
+npm run dev
+```
 
 ## License
-This project is released under the terms of the license found in `LICENSE`.
+See `LICENSE` for licensing terms.
 
----
-For deep layer-by-layer explanations of analytics modules, refer to the existing Python source and `ARCHITECTURE.md`. The previous verbose breakdown was moved to dedicated architecture documentation for clarity.
+For deeper design details consult `ARCHITECTURE.md`. For full operational steps see `RUNNING.md`.
