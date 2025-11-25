@@ -150,28 +150,6 @@ Observability:
                  +-----------+
 ```
 
----
-## 10. Risks & Mitigations
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Market data outage | Incomplete analytics | Retry logic / alternate provider |
-| Long simulation time | Slow responses | Adjust simulation counts / profiling |
-| Hard-coded secrets | Security exposure | Move to environment variables |
-| Duplicate scheduler runs | Redundant jobs | Reloader gating (`WERKZEUG_RUN_MAIN`) |
-| AI summary failure | Missing narrative | Fallback to quantitative JSON only |
-
----
-## 11. Data Integrity
-- Portfolio updates handled transactionally
-- Validation for symbol and non-negative quantities
-- Idempotent analytics calls (same input → same output without side-effects)
-
----
-## 12. Testing (Current State)
-- Java: basic tests (see surefire reports)
-- Python: manual invocation via scripts and endpoint
-- Frontend: manual verification
 
 ---
 ## 13. Glossary
