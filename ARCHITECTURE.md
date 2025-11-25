@@ -152,7 +152,7 @@ Observability:
 
 
 ---
-## 13. Glossary
+## 10. Glossary
 - VaR: Value at Risk
 - CVaR: Conditional Value at Risk
 - Sharpe Ratio: Return per unit of risk (volatility)
