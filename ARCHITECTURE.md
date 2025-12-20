@@ -122,31 +122,9 @@ Observability:
 - Logs in each layer (extendable for structured logging)
 
 ---
-## 9. Deployment Topology (Current Logical View)
-```
-+------------------+        +------------------+
-|  Browser Clients |        |  Mobile Clients  |
-+------------------+        +------------------+
-           |                          |
-           v                          v
-      +-------------------------------+
-      |        Backend (Spring)       |
-      +---------------+---------------+
-                      |
-                      v
-           +-------------------------+
-           | Python Analytics Service|
-           +-----------+-------------+
-                       |
-                       v
-                 +-----------+
-                 |PostgreSQL |
-                 +-----------+
-```
 
 
----
-## 10. Glossary
+## 9. Glossary
 - VaR: Value at Risk
 - CVaR: Conditional Value at Risk
 - Sharpe Ratio: Return per unit of risk (volatility)
