@@ -18,24 +18,18 @@ Non-Functional Requirements:
 
 ---
 ## 2. High-Level Component Diagram
-```
-+-------------------+        REST        +------------------------+
-|   React Frontend  |  <-------------->  |  Spring Boot Backend   |
-|  (Vite + React)   |                   | (Auth + Portfolio API) |
-+-------------------+                   +-----------+------------+
-                                                  |
-                                                  | REST (JSON)
-                                                  v
-                                      +----------------------------+
-                                      |  Python Analytics Service  |
-                                      | (Flask + Scheduler + AI)   |
-                                      +-------------+--------------+
-                                                    |
-                                                    v
-                                         +---------------------------+
-                                         | Market Data Providers     |
-                                         | (yFinance / Yahoo APIs)   |
-                                         +---------------------------+
+```mermaid
+flowchart TD
+    A["React Frontend<br/>Vite and React"]
+    B["Spring Boot Backend<br/>Auth and Portfolio API"]
+    C["Python Analytics Service<br/>Flask, Scheduler, AI"]
+    D["Market Data Providers<br/>yFinance and Yahoo APIs"]
+
+    A <--> |REST| B
+    B --> |REST JSON| C
+    C --> D
+
+
 ```
 PostgreSQL connects to the backend via JPA/Hibernate.
 
