@@ -110,8 +110,8 @@ flowchart TB
 
     A --> B
     B <--> C
-    B --> D
-    D --> E
+    B <--> D
+    D <--> E
     D --> C
 
 
