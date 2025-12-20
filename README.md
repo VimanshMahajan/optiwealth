@@ -100,14 +100,21 @@ Whether you're analyzing returns, stress-testing risk, simulating future price p
 
 ## 🏗️ System Architecture
 
-```
-Frontend (React + Vite)
-        ↓
-Backend (Spring Boot, JWT, JPA)
-        ↓
-Python Analytics Microservice
-        ↓
-Market Data Providers
+```mermaid
+flowchart TB
+    A["Frontend<br/>React and Vite"]
+    B["Backend<br/>Spring Boot, JWT, JPA"]
+    C["PostgreSQL"]
+    D["Python Analytics Microservice"]
+    E["Market Data Providers"]
+
+    A --> B
+    B <--> C
+    B --> D
+    D --> E
+    D --> C
+
+
 ```
 
 ### Design Highlights
