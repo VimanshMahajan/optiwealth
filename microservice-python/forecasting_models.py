@@ -11,15 +11,17 @@ def forecast_arima(series: pd.Series, steps: int = 30) -> pd.Series:
     Returns a Series of length 'steps' containing forecasted returns.
     """
     series = series.dropna().reset_index(drop=True)
+    series_1d = series.iloc[:, 0] if isinstance(series, pd.DataFrame) else series
 
-    std_val = float(series.std(skipna=True)) if not series.empty else 0.0
-
-    if len(series) < 20 or std_val < 1e-9:
+    # std_val = float(series.std(skipna=True)) if not series.empty else 0.0
+    # std_val = float(series['returns'].std(skipna=True)) if not series.empty else 0.0
+    std_val = float(series_1d.std(skipna=True)) if not series_1d.empty else 0.0
+    if len(series_1d) < 20 or std_val < 1e-9:
         print(f"[ARIMA Warning] Insufficient or constant data — returning NaNs.")
         return pd.Series([np.nan] * steps)
 
     try:
-        model = ARIMA(series, order=(5, 1, 0))
+        model = ARIMA(series_1d, order=(5, 1, 0))
         model_fit = model.fit()
         forecast = model_fit.forecast(steps=steps)
         return forecast
@@ -34,14 +36,16 @@ def forecast_garch(series: pd.Series, steps: int = 30) -> np.ndarray:
     Returns an array of forecasted volatility values.
     """
     series = series.dropna().reset_index(drop=True)
-    std_val = float(series.std(skipna=True)) if not series.empty else 0.0
+    series_1d = series.iloc[:, 0] if isinstance(series, pd.DataFrame) else series
+    # std_val = float(series.std(skipna=True)) if not series.empty else 0.0
+    std_val = float(series_1d.std(skipna=True)) if not series_1d.empty else 0.0
 
-    if len(series) < 20 or std_val < 1e-9:
+    if len(series_1d) < 20 or std_val < 1e-9:
         print(f"[GARCH Warning] Insufficient or constant data — returning NaNs.")
         return np.full(steps, np.nan)
 
     try:
-        model = arch_model(series * 100, vol='Garch', p=1, q=1, rescale=False)
+        model = arch_model(series_1d * 100, vol='Garch', p=1, q=1, rescale=False)
         model_fit = model.fit(disp="off")
         forecasts = model_fit.forecast(horizon=steps)
         return np.sqrt(forecasts.variance.values[-1] / 10000)
@@ -78,37 +82,68 @@ def summarize_forecast(symbol: str, df: pd.DataFrame, steps: int = 30, sims: int
     """
     Compact summary of ARIMA, GARCH, and Monte Carlo simulations for one stock.
     """
-    returns = df["Close"].pct_change().dropna()
+    close_data = df["Close"]
+    close_series = close_data.iloc[:, 0] if isinstance(close_data, pd.DataFrame) else close_data
+    close_series = close_series.dropna()
+
+    if close_series.empty:
+        return {"symbol": symbol, "error": "No valid close data"}
+
+    returns = close_series.pct_change().dropna()
     if returns.empty:
         return {"symbol": symbol, "error": "No valid returns"}
+
+    current_price = float(close_series.iloc[-1])
 
     # Run forecasts
     arima_fc = forecast_arima(returns, steps)
     garch_vol = forecast_garch(returns, steps)
     mc_paths = monte_carlo_simulation(
-        current_price=float(df["Close"].iloc[-1]),
-        mu=float(returns.mean(skipna=True)),
-        sigma=float(returns.std(skipna=True)),
+        current_price=current_price,
+
+        # Safe extraction for mu (mean)
+        mu=float(returns.iloc[:, 0].mean(skipna=True)) if isinstance(returns, pd.DataFrame) else float(
+            returns.mean(skipna=True)),
+
+        # Safe extraction for sigma (standard deviation)
+        sigma=float(returns.iloc[:, 0].std(skipna=True)) if isinstance(returns, pd.DataFrame) else float(
+            returns.std(skipna=True)),
+
         steps=steps,
         sims=sims
     )
 
     # --- Summaries ---
-    arima_mean = float(np.nanmean(arima_fc))
-    arima_last = float(arima_fc.iloc[-1]) if not arima_fc.empty else np.nan
-    garch_mean = float(np.nanmean(garch_vol))
+    arima_values = np.asarray(arima_fc, dtype=float)
+    arima_finite = arima_values[np.isfinite(arima_values)]
+    arima_mean = float(np.mean(arima_finite)) if arima_finite.size else np.nan
+    arima_last = float(arima_values[-1]) if arima_values.size else np.nan
+
+    garch_values = np.asarray(garch_vol, dtype=float)
+    garch_finite = garch_values[np.isfinite(garch_values)]
+    garch_mean = float(np.mean(garch_finite)) if garch_finite.size else np.nan
     garch_trend = (
-        "increasing" if garch_vol[-1] > garch_vol[0] else
-        "decreasing" if garch_vol[-1] < garch_vol[0] else "stable"
-    ) if np.all(np.isfinite(garch_vol)) else "unknown"
+        "increasing" if garch_values[-1] > garch_values[0] else
+        "decreasing" if garch_values[-1] < garch_values[0] else "stable"
+    ) if garch_values.size >= 2 and np.all(np.isfinite(garch_values)) else "unknown"
 
     final_prices = mc_paths[-1, :]
-    price_mean = float(np.nanmean(final_prices))
-    price_min = float(np.nanmin(final_prices))
-    price_max = float(np.nanmax(final_prices))
-    current_price = float(df["Close"].iloc[-1])
-    pct_change_range = [round((price_min - current_price) / current_price * 100, 2),
-                        round((price_max - current_price) / current_price * 100, 2)]
+    finite_prices = final_prices[np.isfinite(final_prices)]
+    if finite_prices.size == 0:
+        price_mean = np.nan
+        price_min = np.nan
+        price_max = np.nan
+        pct_change_range = [np.nan, np.nan]
+    else:
+        price_mean = float(np.nanmean(finite_prices))
+        price_min = float(np.nanmin(finite_prices))
+        price_max = float(np.nanmax(finite_prices))
+        pct_change_range = (
+            [round((price_min - current_price) / current_price * 100, 2),
+             round((price_max - current_price) / current_price * 100, 2)]
+            if np.isfinite(current_price) and current_price != 0
+            else [np.nan, np.nan]
+        )
 
     return {
         "symbol": symbol,

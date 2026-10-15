@@ -1,5 +1,6 @@
 # report_generator.py
 import json
+import numpy as np
 from data_fetcher import get_historical_data
 from descriptive_metrics import analyze_portfolio
 from risk_diagnostics import compute_risk_diagnostics
@@ -16,10 +17,16 @@ def convert_numpy(obj):
         return {k: convert_numpy(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_numpy(i) for i in obj]
-    elif isinstance(obj, (float, int)):
+    elif isinstance(obj, tuple):
+        return [convert_numpy(i) for i in obj]
+    elif isinstance(obj, (int,)):
         return obj
+    elif isinstance(obj, (float, np.floating)):
+        return obj if np.isfinite(obj) else None
+    elif isinstance(obj, (np.integer,)):
+        return int(obj)
     elif hasattr(obj, 'tolist'):
-        return obj.tolist()
+        return convert_numpy(obj.tolist())
     else:
         return obj
 

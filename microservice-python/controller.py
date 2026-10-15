@@ -6,7 +6,7 @@ import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from NLP_layer.gemini import generate_response
-from report_generator import generate_portfolio_report
+from report_generator import generate_portfolio_report, convert_numpy
 from top_picks.top_picks import execute_picks
 
 app = Flask(__name__)
@@ -63,7 +63,7 @@ def analyze_portfolio_route():
         # Append AI summary to the result
         result["ai_summary"] = get_ai_summary.get("ai_summary", {})
 
-        return jsonify(result), 200
+        return jsonify(convert_numpy(result)), 200
 
     except Exception as e:
         print(f"Error in /analyze-portfolio: {e}")
@@ -132,9 +132,9 @@ atexit.register(shutdown_scheduler)
 
 if __name__ == "__main__":
     # Only start scheduler if not in reloader process (fixes debug=True issue)
-    import os
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        start_scheduler()
+    # import os
+    # if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    #     start_scheduler()
 
     # Start Flask app
     # Note: Consider setting debug=False in production
