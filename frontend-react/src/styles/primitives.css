@@ -1,0 +1,188 @@
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans), sans-serif;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-focus) 28%, transparent);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}
+
+.page-container {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.page-content,
+.dashboard-content {
+  width: min(100% - (var(--content-padding) * 2), var(--content-width));
+  margin: 0 auto;
+  padding: var(--space-10) 0 var(--space-16);
+}
+
+.page-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: var(--leading-tight);
+}
+
+.page-subtitle {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.form-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.form-input {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.form-input:focus {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-focus) 14%, transparent);
+  outline: none;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-view,
+.btn-refresh,
+.submit-button {
+  min-height: 2.75rem;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-md);
+  font-weight: 600;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast),
+    box-shadow var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+}
+
+.btn-primary,
+.submit-button {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover:not(:disabled),
+.submit-button:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn-secondary,
+.btn-view,
+.btn-refresh {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.btn-secondary:hover:not(:disabled),
+.btn-view:hover:not(:disabled),
+.btn-refresh:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.card,
+.surface-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+  padding: var(--space-2) var(--space-3);
+}
+
+.modal-overlay {
+  background: rgb(0 0 0 / 48%);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text);
+}
+
+@media (max-width: 768px) {
+  .page-content,
+  .dashboard-content {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-12);
+  }
+}

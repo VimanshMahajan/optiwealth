@@ -1,5 +1,7 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import Button from "./ui/Button";
+import ThemeToggle from "./ui/ThemeToggle";
 import "./Navbar.css";
 
 const Navbar: React.FC = () => {
@@ -15,31 +17,29 @@ const Navbar: React.FC = () => {
     return (
         <nav className="navbar">
             <div className="navbar-container">
-                <div className="navbar-brand" onClick={() => navigate("/dashboard")}>
+                <button className="navbar-brand" onClick={() => navigate("/dashboard")} aria-label="Go to dashboard">
                     <div className="navbar-logo">OW</div>
                     <span className="navbar-title">OptiWealth</span>
-                </div>
+                </button>
 
                 <div className="navbar-menu">
-                    <button className="nav-btn" onClick={() => navigate("/dashboard")}>
-                        <span className="nav-icon">📊</span>
+                    <NavLink className={({ isActive }) => `nav-btn${isActive ? " active" : ""}`} to="/dashboard">
                         Dashboard
-                    </button>
-                    <button className="nav-btn" onClick={() => navigate("/portfolios")}>
-                        <span className="nav-icon">💼</span>
+                    </NavLink>
+                    <NavLink className={({ isActive }) => `nav-btn${isActive ? " active" : ""}`} to="/portfolios">
                         Portfolios
-                    </button>
-                    <button className="nav-btn" onClick={() => navigate("/top-picks")}>
-                        <span className="nav-icon">⭐</span>
+                    </NavLink>
+                    <NavLink className={({ isActive }) => `nav-btn${isActive ? " active" : ""}`} to="/top-picks">
                         Top Picks
-                    </button>
+                    </NavLink>
                 </div>
 
                 <div className="navbar-user">
                     <span className="user-name">{user.username || user.email}</span>
-                    <button className="logout-btn" onClick={handleLogout}>
+                    <ThemeToggle />
+                    <Button className="logout-btn" variant="ghost" onClick={handleLogout}>
                         Logout
-                    </button>
+                    </Button>
                 </div>
             </div>
         </nav>
@@ -47,4 +47,3 @@ const Navbar: React.FC = () => {
 };
 
 export default Navbar;
-

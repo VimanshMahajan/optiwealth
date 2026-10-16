@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import StockSymbolAutocomplete from "../components/StockSymbolAutocomplete";
@@ -50,20 +50,7 @@ const PortfolioDetailPage: React.FC = () => {
         }));
     };
 
-    useEffect(() => {
-        loadPortfolioData();
-        // Load cached analytics from sessionStorage
-        const cachedAnalytics = sessionStorage.getItem(`analytics_${portfolioId}`);
-        if (cachedAnalytics) {
-            try {
-                setAnalytics(JSON.parse(cachedAnalytics));
-            } catch (error) {
-                console.error("Error loading cached analytics:", error);
-            }
-        }
-    }, [portfolioId]);
-
-    const loadPortfolioData = async () => {
+    const loadPortfolioData = useCallback(async () => {
         try {
             setLoading(true);
             const [portfolioData, holdingsData] = await Promise.all([
@@ -79,7 +66,20 @@ const PortfolioDetailPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [navigate, portfolioId]);
+
+    useEffect(() => {
+        loadPortfolioData();
+        // Load cached analytics from sessionStorage
+        const cachedAnalytics = sessionStorage.getItem(`analytics_${portfolioId}`);
+        if (cachedAnalytics) {
+            try {
+                setAnalytics(JSON.parse(cachedAnalytics));
+            } catch (error) {
+                console.error("Error loading cached analytics:", error);
+            }
+        }
+    }, [loadPortfolioData, portfolioId]);
 
     const handleAnalyze = async () => {
         try {
@@ -191,7 +191,7 @@ const PortfolioDetailPage: React.FC = () => {
                         ← Back
                     </button>
                     <div className="portfolio-detail-title">
-                        <div className="portfolio-icon-xl">💼</div>
+                        <div className="portfolio-icon-xl">OW</div>
                         <div>
                             <h1 className="page-title">{portfolio?.name}</h1>
                             <p className="page-subtitle">Portfolio ID: {portfolioId}</p>
@@ -218,7 +218,7 @@ const PortfolioDetailPage: React.FC = () => {
                             onClick={handleAnalyze}
                             disabled={analyzing || holdings.length === 0}
                         >
-                            {analyzing ? "Analyzing..." : analytics ? "🔄 Re-Analyze Portfolio" : "📊 Analyze Portfolio"}
+                            {analyzing ? "Analyzing..." : analytics ? "Re-Analyze Portfolio" : "Analyze Portfolio"}
                         </button>
                     </div>
                 </div>
@@ -229,7 +229,6 @@ const PortfolioDetailPage: React.FC = () => {
 
                     {holdings.length === 0 ? (
                         <div className="empty-state">
-                            <div className="empty-icon">📈</div>
                             <h3>No holdings yet</h3>
                             <p>Add your first stock holding to start tracking</p>
                             <button className="btn-primary" onClick={() => setShowAddModal(true)}>
@@ -321,9 +320,9 @@ const PortfolioDetailPage: React.FC = () => {
                         {analytics.ai_summary && (
                             <div className="ai-summary-section">
                                 <div className="collapsible-header" onClick={() => toggleSection('aiInsights')}>
-                                    <h3 className="ai-title">🤖 AI-Powered Insights</h3>
+                                    <h3 className="ai-title">AI-Powered Insights</h3>
                                     <button className="collapse-btn">
-                                        {expandedSections.aiInsights ? '▼' : '▶'}
+                                        {expandedSections.aiInsights ? 'Collapse' : 'Expand'}
                                     </button>
                                 </div>
 
@@ -331,47 +330,47 @@ const PortfolioDetailPage: React.FC = () => {
                                 <div className="collapsible-content">
 
                                 {/* Portfolio Summary */}
-                                {(analytics.ai_summary as any).portfolioSummary && (
+                                {analytics.ai_summary.portfolioSummary && (
                                     <div className="ai-insight-card">
-                                        <h4 className="insight-heading">📊 Portfolio Summary</h4>
-                                        <p className="insight-text">{(analytics.ai_summary as any).portfolioSummary}</p>
+                                        <h4 className="insight-heading">Portfolio Summary</h4>
+                                        <p className="insight-text">{analytics.ai_summary.portfolioSummary}</p>
                                     </div>
                                 )}
 
                                 {/* Risk Analysis */}
-                                {(analytics.ai_summary as any).riskAnalysis && (
+                                {analytics.ai_summary.riskAnalysis && (
                                     <div className="ai-insight-card">
-                                        <h4 className="insight-heading">⚠️ Risk Analysis</h4>
-                                        <p className="insight-text">{(analytics.ai_summary as any).riskAnalysis}</p>
+                                        <h4 className="insight-heading">Risk Analysis</h4>
+                                        <p className="insight-text">{analytics.ai_summary.riskAnalysis}</p>
                                     </div>
                                 )}
 
                                 {/* Forecast Insights */}
-                                {(analytics.ai_summary as any).forecastInsights && (
+                                {analytics.ai_summary.forecastInsights && (
                                     <div className="ai-insight-card">
-                                        <h4 className="insight-heading">🔮 Market Forecast</h4>
-                                        <p className="insight-text">{(analytics.ai_summary as any).forecastInsights}</p>
+                                        <h4 className="insight-heading">Market Forecast</h4>
+                                        <p className="insight-text">{analytics.ai_summary.forecastInsights}</p>
                                     </div>
                                 )}
 
                                 {/* Optimization Insights */}
-                                {(analytics.ai_summary as any).optimizationInsights && (
+                                {analytics.ai_summary.optimizationInsights && (
                                     <div className="ai-insight-card">
-                                        <h4 className="insight-heading">⚡ Optimization Recommendations</h4>
-                                        <p className="insight-text">{(analytics.ai_summary as any).optimizationInsights}</p>
+                                        <h4 className="insight-heading">Optimization Recommendations</h4>
+                                        <p className="insight-text">{analytics.ai_summary.optimizationInsights}</p>
                                     </div>
                                 )}
 
                                 {/* Conclusion */}
-                                {(analytics.ai_summary as any).summaryConclusion && (
+                                {analytics.ai_summary.summaryConclusion && (
                                     <div className="ai-insight-card conclusion">
-                                        <h4 className="insight-heading">💡 Key Takeaways</h4>
-                                        <p className="insight-text">{(analytics.ai_summary as any).summaryConclusion}</p>
+                                        <h4 className="insight-heading">Key Takeaways</h4>
+                                        <p className="insight-text">{analytics.ai_summary.summaryConclusion}</p>
                                     </div>
                                 )}
 
                                 {/* Legacy support for old format */}
-                                {analytics.ai_summary.summary && !(analytics.ai_summary as any).portfolioSummary && (
+                                {analytics.ai_summary.summary && !analytics.ai_summary.portfolioSummary && (
                                     <div className="ai-summary-box">
                                         <p>{analytics.ai_summary.summary}</p>
                                     </div>
@@ -396,17 +395,17 @@ const PortfolioDetailPage: React.FC = () => {
                             <div className="section">
                                 <div className="collapsible-header" onClick={() => toggleSection('riskMetrics')}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <h2 className="section-title" style={{ marginBottom: 0 }}>📉 Risk Metrics</h2>
+                                        <h2 className="section-title" style={{ marginBottom: 0 }}>Risk Metrics</h2>
                                         <span style={{
                                             fontSize: '10px',
-                                            color: '#999',
+                                            color: 'var(--color-text-tertiary)',
                                             fontWeight: 400
                                         }}>
                                             (1Y historical)
                                         </span>
                                     </div>
                                     <button className="collapse-btn">
-                                        {expandedSections.riskMetrics ? '▼' : '▶'}
+                                        {expandedSections.riskMetrics ? 'Collapse' : 'Expand'}
                                     </button>
                                 </div>
 
@@ -474,17 +473,17 @@ const PortfolioDetailPage: React.FC = () => {
                             <div className="section">
                                 <div className="collapsible-header" onClick={() => toggleSection('forecasts')}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <h2 className="section-title" style={{ marginBottom: 0 }}>🔮 Market Forecasts</h2>
+                                        <h2 className="section-title" style={{ marginBottom: 0 }}>Market Forecasts</h2>
                                         <span style={{
                                             fontSize: '10px',
-                                            color: '#999',
+                                            color: 'var(--color-text-tertiary)',
                                             fontWeight: 400
                                         }}>
                                             (30-day outlook)
                                         </span>
                                     </div>
                                     <button className="collapse-btn">
-                                        {expandedSections.forecasts ? '▼' : '▶'}
+                                        {expandedSections.forecasts ? 'Collapse' : 'Expand'}
                                     </button>
                                 </div>
 
@@ -496,7 +495,7 @@ const PortfolioDetailPage: React.FC = () => {
                                             <div className="forecast-header">
                                                 <div className="forecast-symbol">{symbol.replace('.NS', '')}</div>
                                                 <div className={`forecast-trend ${forecast.trend}`}>
-                                                    {forecast.trend === 'up' ? '📈' : forecast.trend === 'down' ? '📉' : '➡️'} {forecast.trend?.toUpperCase()}
+                                                    {forecast.trend?.toUpperCase()}
                                                 </div>
                                             </div>
                                             <div className="forecast-metrics">
@@ -528,9 +527,9 @@ const PortfolioDetailPage: React.FC = () => {
                                             <div style={{
                                                 marginTop: '12px',
                                                 paddingTop: '8px',
-                                                borderTop: '1px solid #f0f0f0',
+                                                borderTop: '1px solid var(--color-border)',
                                                 fontSize: '10px',
-                                                color: '#999',
+                                                color: 'var(--color-text-tertiary)',
                                                 textAlign: 'center'
                                             }}>
                                                 30-day forecast
@@ -548,17 +547,17 @@ const PortfolioDetailPage: React.FC = () => {
                             <div className="section">
                                 <div className="collapsible-header" onClick={() => toggleSection('optimization')}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <h2 className="section-title" style={{ marginBottom: 0 }}>⚡ Portfolio Optimization</h2>
+                                        <h2 className="section-title" style={{ marginBottom: 0 }}>Portfolio Optimization</h2>
                                         <span style={{
                                             fontSize: '10px',
-                                            color: '#999',
+                                            color: 'var(--color-text-tertiary)',
                                             fontWeight: 400
                                         }}>
                                             (based on 1Y data)
                                         </span>
                                     </div>
                                     <button className="collapse-btn">
-                                        {expandedSections.optimization ? '▼' : '▶'}
+                                        {expandedSections.optimization ? 'Collapse' : 'Expand'}
                                     </button>
                                 </div>
 
@@ -569,7 +568,7 @@ const PortfolioDetailPage: React.FC = () => {
                                     {/* Max Sharpe */}
                                     {analytics.optimization.maxSharpe && (
                                         <div className="optimization-card">
-                                            <h3 className="optimization-heading">📊 Maximum Sharpe Ratio</h3>
+                                            <h3 className="optimization-heading">Maximum Sharpe Ratio</h3>
                                             <p className="optimization-desc">Best risk-adjusted returns</p>
                                             <div className="weight-bars">
                                                 {Object.entries(analytics.optimization.maxSharpe).map(([symbol, weight]) => (
@@ -593,7 +592,7 @@ const PortfolioDetailPage: React.FC = () => {
                                     {/* Min Volatility */}
                                     {analytics.optimization.minVolatility && (
                                         <div className="optimization-card">
-                                            <h3 className="optimization-heading">🛡️ Minimum Volatility</h3>
+                                            <h3 className="optimization-heading">Minimum Volatility</h3>
                                             <p className="optimization-desc">Lowest risk portfolio</p>
                                             <div className="weight-bars">
                                                 {Object.entries(analytics.optimization.minVolatility).map(([symbol, weight]) => (
@@ -617,7 +616,7 @@ const PortfolioDetailPage: React.FC = () => {
                                     {/* CVaR */}
                                     {analytics.optimization.portfolioCVaR95 !== undefined && (
                                         <div className="optimization-card cvar">
-                                            <h3 className="optimization-heading">⚠️ Conditional VaR (95%)</h3>
+                                            <h3 className="optimization-heading">Conditional VaR (95%)</h3>
                                             <p className="optimization-desc">Potential loss in worst 5% scenarios</p>
                                             <div className="cvar-value">
                                                 {(analytics.optimization.portfolioCVaR95 * 100).toFixed(2)}%
@@ -634,9 +633,9 @@ const PortfolioDetailPage: React.FC = () => {
                         {analytics.portfolio?.holdings && analytics.portfolio.holdings.length > 0 && (
                             <div className="holdings-analytics">
                                 <div className="collapsible-header" onClick={() => toggleSection('holdingsAnalysis')}>
-                                    <h3 className="subsection-title">📈 Detailed Holdings Analysis</h3>
+                                    <h3 className="subsection-title">Detailed Holdings Analysis</h3>
                                     <button className="collapse-btn">
-                                        {expandedSections.holdingsAnalysis ? '▼' : '▶'}
+                                        {expandedSections.holdingsAnalysis ? 'Collapse' : 'Expand'}
                                     </button>
                                 </div>
 

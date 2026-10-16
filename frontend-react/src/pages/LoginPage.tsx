@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { login } from "../services/authService";
+import Input from "../components/ui/Input";
+import Button from "../components/ui/Button";
+import ThemeToggle from "../components/ui/ThemeToggle";
 import "./Auth.css";
 
 const LoginPage: React.FC = () => {
@@ -32,6 +35,7 @@ const LoginPage: React.FC = () => {
 
     return (
         <div className="auth-container">
+            <div className="auth-theme-toggle"><ThemeToggle /></div>
             <div className="auth-card">
                 <div className="auth-header">
                     <div className="auth-logo">
@@ -44,7 +48,7 @@ const LoginPage: React.FC = () => {
                 <form onSubmit={handleSubmit} className="auth-form">
                     <div className="form-group">
                         <label className="form-label" htmlFor="email">Email Address</label>
-                        <input
+                        <Input
                             id="email"
                             type="email"
                             value={email}
@@ -58,7 +62,7 @@ const LoginPage: React.FC = () => {
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="password">Password</label>
-                        <input
+                        <Input
                             id="password"
                             type="password"
                             value={password}
@@ -76,10 +80,10 @@ const LoginPage: React.FC = () => {
                         </div>
                     )}
 
-                    <button type="submit" disabled={loading} className="submit-button">
+                    <Button type="submit" disabled={loading} className="submit-button">
                         {loading && <span className="spinner"></span>}
                         {loading ? "Signing In..." : "Sign In"}
-                    </button>
+                    </Button>
                 </form>
 
                 <div className="auth-footer">
