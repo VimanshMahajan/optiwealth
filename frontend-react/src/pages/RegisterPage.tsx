@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { register as registerApi } from "../services/authService";
 import { useNavigate, Link } from "react-router-dom";
+import Button from "../components/ui/Button";
+import Input from "../components/ui/Input";
+import ThemeToggle from "../components/ui/ThemeToggle";
 import "./Auth.css";
 
 const RegisterPage: React.FC = () => {
@@ -28,6 +31,7 @@ const RegisterPage: React.FC = () => {
 
     return (
         <div className="auth-container">
+            <div className="auth-theme-toggle"><ThemeToggle /></div>
             <div className="auth-card">
                 <div className="auth-header">
                     <div className="auth-logo">
@@ -40,7 +44,7 @@ const RegisterPage: React.FC = () => {
                 <form onSubmit={handleRegister} className="auth-form">
                     <div className="form-group">
                         <label className="form-label" htmlFor="username">Username</label>
-                        <input
+                        <Input
                             id="username"
                             type="text"
                             value={username}
@@ -54,7 +58,7 @@ const RegisterPage: React.FC = () => {
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="email">Email Address</label>
-                        <input
+                        <Input
                             id="email"
                             type="email"
                             value={email}
@@ -68,7 +72,7 @@ const RegisterPage: React.FC = () => {
 
                     <div className="form-group">
                         <label className="form-label" htmlFor="password">Password</label>
-                        <input
+                        <Input
                             id="password"
                             type="password"
                             value={password}
@@ -86,27 +90,23 @@ const RegisterPage: React.FC = () => {
                         </div>
                     )}
 
-                    <button type="submit" disabled={loading} className="submit-button">
+                    <Button type="submit" disabled={loading} className="submit-button">
                         {loading && <span className="spinner"></span>}
                         {loading ? "Creating Account..." : "Create Account"}
-                    </button>
+                    </Button>
                 </form>
 
                 <div className="auth-features">
                     <div className="feature-item">
-                        <span className="feature-icon">📊</span>
                         <span>Portfolio Analytics</span>
                     </div>
                     <div className="feature-item">
-                        <span className="feature-icon">🎯</span>
                         <span>Risk Optimization</span>
                     </div>
                     <div className="feature-item">
-                        <span className="feature-icon">📈</span>
                         <span>Real-time Tracking</span>
                     </div>
                     <div className="feature-item">
-                        <span className="feature-icon">🔒</span>
                         <span>Secure & Private</span>
                     </div>
                 </div>

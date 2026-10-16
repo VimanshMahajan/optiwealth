@@ -108,6 +108,10 @@ const StockSymbolAutocomplete: React.FC<StockSymbolAutocompleteProps> = ({
                 ref={inputRef}
                 type="text"
                 className="form-input"
+                role="combobox"
+                aria-expanded={isOpen}
+                aria-autocomplete="list"
+                aria-controls="symbol-search-results"
                 placeholder={placeholder}
                 value={value}
                 onChange={handleInputChange}
@@ -117,22 +121,25 @@ const StockSymbolAutocomplete: React.FC<StockSymbolAutocompleteProps> = ({
                 required
             />
             {isOpen && filteredSymbols.length > 0 && (
-                <div ref={dropdownRef} className="autocomplete-dropdown">
+                <div ref={dropdownRef} id="symbol-search-results" className="autocomplete-dropdown" role="listbox">
                     <div className="autocomplete-info">
                         {filteredSymbols.length} symbol{filteredSymbols.length !== 1 ? 's' : ''} found
                         {filteredSymbols.length === 50 && ' (showing first 50)'}
                     </div>
                     <div className="autocomplete-list">
                         {filteredSymbols.map((symbol, index) => (
-                            <div
+                            <button
                                 key={symbol}
+                                type="button"
+                                role="option"
+                                aria-selected={index === highlightedIndex}
                                 className={`autocomplete-item ${index === highlightedIndex ? 'highlighted' : ''}`}
                                 onClick={() => handleSelectSymbol(symbol)}
                                 onMouseEnter={() => setHighlightedIndex(index)}
                             >
                                 <span className="symbol-text">{symbol}</span>
                                 <span className="symbol-badge">NSE</span>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 </div>

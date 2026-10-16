@@ -15,6 +15,16 @@ export interface Holding {
     portfolioId: number;
 }
 
+export interface AiSummary {
+    summary?: string;
+    recommendations?: string[];
+    portfolioSummary?: string;
+    riskAnalysis?: string;
+    forecastInsights?: string;
+    optimizationInsights?: string;
+    summaryConclusion?: string;
+}
+
 export interface AnalyticsResult {
     portfolio: {
         portfolioValue: number;
@@ -51,18 +61,15 @@ export interface AnalyticsResult {
             expectedReturn?: number;
             trend?: string;
             volatility?: number;
-            priceRange?: any;
+            priceRange?: number[];
         };
     };
     optimization?: {
-        maxSharpe?: any;
-        minVolatility?: any;
+        maxSharpe?: Record<string, number>;
+        minVolatility?: Record<string, number>;
         portfolioCVaR95?: number;
     };
-    ai_summary?: {
-        summary?: string;
-        recommendations?: string[];
-    };
+    ai_summary?: AiSummary;
 }
 
 export interface TopPick {
@@ -146,4 +153,3 @@ export const getTopPicks = async (): Promise<TopPick[]> => {
     const res = await api.get("/api/top-picks");
     return res.data;
 };
-
