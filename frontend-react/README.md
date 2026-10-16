@@ -207,7 +207,7 @@ npm run preview  # Preview production build
 - Stock symbols should be valid NSE symbols (e.g., RELIANCE, TCS, INFY)
 - The backend automatically appends ".NS" suffix for NSE stocks
 - Portfolio analysis requires at least one holding
-- Top picks are updated daily by the Python microservice scheduler
+- Top picks and the shared symbol catalog are updated daily by the dedicated Python refresh worker
 
 ## 🤝 Contributing
 
@@ -220,4 +220,3 @@ See LICENSE file in the root directory.
 ---
 
 Built with ❤️ using React + TypeScript + Vite
-

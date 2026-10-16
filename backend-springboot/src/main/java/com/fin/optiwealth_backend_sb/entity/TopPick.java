@@ -8,7 +8,13 @@ import lombok.NoArgsConstructor;
 import java.time.ZonedDateTime;
 
 @Entity
-@Table(name = "top_picks")
+@Table(
+        name = "top_picks",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_top_picks_symbol_period",
+                columnNames = {"symbol", "period"}
+        )
+)
 @Data
 @NoArgsConstructor
 public class TopPick {

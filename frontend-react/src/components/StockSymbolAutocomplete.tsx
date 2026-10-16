@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { searchSymbols } from '../services/api';
 import './StockSymbolAutocomplete.css';
 
 interface StockSymbolAutocompleteProps {
     value: string;
     onChange: (value: string) => void;
-    validSymbols: string[];
     placeholder?: string;
 }
 
 const StockSymbolAutocomplete: React.FC<StockSymbolAutocompleteProps> = ({
     value,
     onChange,
-    validSymbols,
     placeholder = "Search stock symbol..."
 }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -21,19 +20,27 @@ const StockSymbolAutocomplete: React.FC<StockSymbolAutocompleteProps> = ({
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (value.trim() === '') {
+        if (value.trim().length < 1) {
             setFilteredSymbols([]);
             setIsOpen(false);
-        } else {
-            const searchTerm = value.toUpperCase();
-            const filtered = validSymbols
-                .filter(symbol => symbol.toUpperCase().includes(searchTerm))
-                .slice(0, 50); // Limit to 50 results for performance
-            setFilteredSymbols(filtered);
-            setIsOpen(filtered.length > 0);
+            return;
         }
-        setHighlightedIndex(-1);
-    }, [value, validSymbols]);
+
+        const timeout = window.setTimeout(async () => {
+            try {
+                const symbols = await searchSymbols(value.trim());
+                setFilteredSymbols(symbols);
+                setIsOpen(symbols.length > 0);
+                setHighlightedIndex(-1);
+            } catch (error) {
+                console.error("Error searching symbols:", error);
+                setFilteredSymbols([]);
+                setIsOpen(false);
+            }
+        }, 250);
+
+        return () => window.clearTimeout(timeout);
+    }, [value]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -135,4 +142,3 @@ const StockSymbolAutocomplete: React.FC<StockSymbolAutocompleteProps> = ({
 };
 
 export default StockSymbolAutocomplete;
-

@@ -43,6 +43,7 @@ PostgreSQL connects to the backend via JPA/Hibernate.
 ### Backend (Spring Boot)
 - Authentication & JWT issuance
 - Portfolio CRUD
+- Database-backed symbol catalog and symbol search API
 - Forwards analytics requests to Python microservice
 - Aggregates and returns combined responses
 
@@ -54,7 +55,7 @@ PostgreSQL connects to the backend via JPA/Hibernate.
 - Optimization (`optimization_engine.py`)
 - Report assembly (`report_generator.py`)
 - AI summary (`NLP_layer/gemini.py`)
-- Scheduled Top Picks (`top_picks/`)
+- Scheduled symbol catalog and Top Picks worker (`symbol_refresh_worker.py`)
 
 Design Notes:
 - Each file represents a logical layer
@@ -87,6 +88,7 @@ Relations:
 Style: REST + JSON.
 - JWT-secured backend endpoints
 - Backend ↔ Python via HTTP POST/GET
+- Frontend ↔ backend symbol search via `GET /api/symbols?query=...`
 
 Initial choice: REST for simplicity and broad tool compatibility.
 

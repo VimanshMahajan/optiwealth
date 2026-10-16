@@ -3,6 +3,7 @@ import pandas as pd
 import psycopg2
 import time
 from dotenv import load_dotenv
+from utils.symbol_catalog import get_active_symbols
 import os
 
 load_dotenv()
@@ -14,17 +15,11 @@ DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
     "port": int(os.getenv("DB_PORT", 5432))
 }
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CHECK_FILE = os.path.join(BASE_DIR, "../utils/nse_symbols.csv")
-CHECK_FILE = os.path.normpath(CHECK_FILE)
-CSV_PATH = CHECK_FILE
 BATCH_SIZE = 150  # fetch in batches to avoid rate limit
 
 
 def get_all_tickers():
-    df = pd.read_csv(CSV_PATH)
-    tickers = [f"{s}.NS" for s in df["SYMBOL"].dropna().unique()]
-    return tickers
+    return [f"{symbol}.NS" for symbol in get_active_symbols()]
 
 
 def fetch_batch(tickers):
@@ -241,10 +236,28 @@ def upsert_top_picks(conn, ranked_df, period, meta, batch_timestamp):
     cur.close()
 
 
+def ensure_top_picks_constraint(conn):
+    """Make existing databases compatible with the symbol/period upsert."""
+    with conn.cursor() as cur:
+        cur.execute("""
+            DELETE FROM top_picks older
+            USING top_picks newer
+            WHERE older.symbol = newer.symbol
+              AND older.period = newer.period
+              AND older.id < newer.id
+        """)
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uk_top_picks_symbol_period
+            ON top_picks (symbol, period)
+        """)
+    conn.commit()
+
+
 def execute_picks():
     tickers = get_all_tickers()
     print(f"Total tickers to fetch: {len(tickers)}")
     conn = psycopg2.connect(**DB_CONFIG)
+    ensure_top_picks_constraint(conn)
     all_data = pd.DataFrame()
 
     # Fetch in batches

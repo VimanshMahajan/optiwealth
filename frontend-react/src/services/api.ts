@@ -22,3 +22,10 @@ api.interceptors.request.use((config) => {
 });
 
 export default api;
+
+export const searchSymbols = async (query: string, limit = 20): Promise<string[]> => {
+    const response = await api.get<string[]>("/api/symbols", {
+        params: { query, limit },
+    });
+    return response.data;
+};

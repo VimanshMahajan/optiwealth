@@ -23,7 +23,6 @@ const PortfolioDetailPage: React.FC = () => {
     const [analytics, setAnalytics] = useState<AnalyticsResult | null>(null);
     const [loading, setLoading] = useState(true);
     const [analyzing, setAnalyzing] = useState(false);
-    const [validSymbols, setValidSymbols] = useState<string[]>([]);
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -64,24 +63,6 @@ const PortfolioDetailPage: React.FC = () => {
         }
     }, [portfolioId]);
 
-    // Load valid symbols from CSV in public folder
-    useEffect(() => {
-        const loadValidSymbols = async () => {
-            try {
-                const response = await fetch('/valid_symbols.csv');
-                const text = await response.text();
-                const symbols = text.split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0 && line !== '');
-                setValidSymbols(symbols);
-                console.log(`Loaded ${symbols.length} valid stock symbols`);
-            } catch (error) {
-                console.error("Error loading valid symbols:", error);
-            }
-        };
-        loadValidSymbols();
-    }, []);
-
     const loadPortfolioData = async () => {
         try {
             setLoading(true);
@@ -117,12 +98,6 @@ const PortfolioDetailPage: React.FC = () => {
 
     const handleAddHolding = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        // Validate symbol exists in valid symbols list
-        if (validSymbols.length > 0 && !validSymbols.includes(formData.symbol)) {
-            alert(`"${formData.symbol}" is not a valid NSE stock symbol. Please select from the dropdown.`);
-            return;
-        }
 
         try {
             await addHolding(
@@ -724,7 +699,6 @@ const PortfolioDetailPage: React.FC = () => {
                                 <StockSymbolAutocomplete
                                     value={formData.symbol}
                                     onChange={(value) => setFormData({ ...formData, symbol: value })}
-                                    validSymbols={validSymbols}
                                     placeholder="Search stock symbol (e.g., RELIANCE, TCS, INFY)"
                                 />
                             </div>
@@ -823,4 +797,3 @@ const PortfolioDetailPage: React.FC = () => {
 };
 
 export default PortfolioDetailPage;
-

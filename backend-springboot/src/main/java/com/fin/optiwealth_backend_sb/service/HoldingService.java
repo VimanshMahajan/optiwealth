@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -41,8 +42,9 @@ public class HoldingService {
     public Holding addHolding(Long portfolioId, String symbol, BigDecimal quantity, BigDecimal avgCost) {
         try {
             AppUser user = getCurrentUser();
+            String normalizedSymbol = symbol == null ? null : symbol.trim().toUpperCase(Locale.ROOT);
 
-            if(!symbolValidator.isValidSymbol(symbol)) {
+            if(!symbolValidator.isValidSymbol(normalizedSymbol)) {
                 throw new RuntimeException("Invalid stock symbol: " + symbol);
             }
 
@@ -54,7 +56,7 @@ public class HoldingService {
             }
 
             Holding holding = Holding.builder()
-                    .symbol(symbol)
+                    .symbol(normalizedSymbol)
                     .quantity(quantity)
                     .avgCost(avgCost)
                     .build();

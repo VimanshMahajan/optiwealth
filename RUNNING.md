@@ -130,11 +130,20 @@ Output: `dist/`.
 The microservice appends `.NS` automatically for NSE symbols.
 
 ---
-## 8. Scheduler Behavior
+## 8. Symbol Catalog and Scheduler Behavior
 
-- On startup `controller.py` executes a Top Picks update once.
-- APScheduler schedules a 24‑hour interval job.
-- Avoid duplicate jobs by keeping `debug=True` only in development; reloader gating is handled with `WERKZEUG_RUN_MAIN`.
+The symbol catalog is stored in the PostgreSQL `symbols` table. Do not copy or update
+`valid_symbols.csv` in either service. Start the dedicated worker from the repository
+root after the database is available:
+
+```
+python microservice-python/symbol_refresh_worker.py
+```
+
+The worker downloads the NSE equity list, updates the catalog transactionally, and
+then refreshes top picks. It runs once at startup and daily at 02:00. The Flask API
+does not run the worker, so analytics requests are never blocked by a catalog or
+top-picks refresh. Run only one worker instance per database.
 
 ---
 ## 9. Testing & Quality
@@ -159,13 +168,13 @@ Python (manual checks): run individual modules or invoke `/analyze-portfolio`.
 | CORS errors | Missing CORS config | Add Spring CORS configuration bean |
 | Empty analytics response | No market data | Verify symbol & network connectivity |
 | AI summary raw text | Response not valid JSON | Check `GOOGLE_API_KEY` and `.env` load |
-| Duplicate scheduler runs | Flask reloader | Keep gating logic, set `debug=False` in production |
+| Duplicate refreshes | Multiple worker processes | Run exactly one `symbol_refresh_worker.py` instance |
 
 ---
 ## 11. Security
 
 - Externalize secrets (JWT, DB credentials) via environment variables.
-- Enforce symbol whitelist using `valid_symbols.csv`.
+- Enforce the symbol whitelist using the PostgreSQL `symbols` table.
 - Use HTTPS in front of services.
 - Apply rate limiting on analytics endpoints.
 
