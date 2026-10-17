@@ -1,5 +1,6 @@
+import argparse
 import logging
-import time
+import sys
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
@@ -15,11 +16,24 @@ def refresh_catalog_and_picks():
         count = refresh_symbols()
         logger.info("Refreshed %d NSE symbols", count)
         execute_picks()
+        return True
     except Exception:
         logger.exception("Symbol/top-picks refresh failed; previous catalog remains active")
+        return False
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Refresh the NSE symbol catalog and Top Picks.")
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Run the refresh once and exit with a success or failure status.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.once:
+        return 0 if refresh_catalog_and_picks() else 1
+
     scheduler = BlockingScheduler()
     scheduler.add_job(
         refresh_catalog_and_picks,
@@ -38,7 +52,8 @@ def main():
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown(wait=True)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -78,6 +78,24 @@ This constructs JDBC format from Railway's individual fields; do not assume `DAT
 
 The Java entities use `app_user`, `portfolio`, `holding`, `symbols`, and `top_picks`; Python refreshes `symbols` and writes `top_picks`. Keep all services on the same PostgreSQL database. Hibernate remains configured with `ddl-auto=update`; no migration framework was added.
 
+## GitHub Actions symbol and Top Picks refresh
+
+The workflow at `.github/workflows/refresh-symbols-and-top-picks.yml` runs daily at **02:00 UTC** and can also be started with **Actions → Refresh symbols and Top Picks → Run workflow**. GitHub-hosted runners are outside Railway's private network, so enable Railway PostgreSQL public TCP access and use its public TCP proxy host and port for this workflow; do not use Railway's private `PGHOST` value. Keep the database credentials in GitHub repository or environment secrets. The scheduled workflow must be present on the repository's default branch; manual runs can select a branch that contains the workflow.
+
+Standard GitHub-hosted runner usage is free for public repositories; private repositories use the account plan's included minutes, with additional usage potentially billed ([GitHub Actions billing](https://docs.github.com/en/actions/concepts/billing-and-usage)).
+
+Add these GitHub Actions secrets (Settings → Secrets and variables → Actions):
+
+- `DB_HOST`: Railway PostgreSQL public TCP proxy hostname.
+- `DB_PORT`: Railway PostgreSQL public TCP proxy port.
+- `DB_NAME`: database name.
+- `DB_USER`: database username.
+- `DB_PASSWORD`: database password.
+
+The workflow installs only `microservice-python/requirements-worker.txt` and invokes `python symbol_refresh_worker.py --once`. That entry point runs catalog refresh followed by Top Picks once, then exits nonzero if the run raises an error. The existing `python symbol_refresh_worker.py` command still performs its initial refresh and starts the daily APScheduler for local/Railway worker use. GitHub Actions concurrency prevents two workflow runs from executing at the same time.
+
+To test manually, first confirm the public proxy can reach the same database containing the application tables, add the five secrets, open the Actions tab, select the workflow, and click **Run workflow**. Inspect the job log for the symbol count and `All top picks updated successfully.` Verify symbol search and Top Picks in the application after completion. If the run fails, check the action log and the database proxy host/port and credentials; never print secrets in workflow logs.
+
 ## Vercel deployment
 
 - Project root: `frontend-react/`
