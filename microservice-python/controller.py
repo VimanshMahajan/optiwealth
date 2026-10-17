@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
 import json
+import os
 
 from NLP_layer.gemini import generate_response
 from report_generator import generate_portfolio_report, convert_numpy
@@ -64,4 +65,4 @@ def analyze_portfolio_route():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8000")), debug=False)

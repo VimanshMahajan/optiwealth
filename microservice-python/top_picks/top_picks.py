@@ -15,6 +15,14 @@ DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
     "port": int(os.getenv("DB_PORT", 5432))
 }
+
+
+def _database_config():
+    names = {"DB_NAME": "dbname", "DB_USER": "user", "DB_PASSWORD": "password", "DB_HOST": "host"}
+    missing = [key for key, field in names.items() if not DB_CONFIG[field]]
+    if missing:
+        raise RuntimeError("Missing required Python database environment variables: " + ", ".join(missing))
+    return DB_CONFIG
 BATCH_SIZE = 150  # fetch in batches to avoid rate limit
 
 
@@ -256,7 +264,7 @@ def ensure_top_picks_constraint(conn):
 def execute_picks():
     tickers = get_all_tickers()
     print(f"Total tickers to fetch: {len(tickers)}")
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = psycopg2.connect(**_database_config())
     ensure_top_picks_constraint(conn)
     all_data = pd.DataFrame()
 

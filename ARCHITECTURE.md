@@ -31,7 +31,9 @@ flowchart TD
 
 
 ```
-PostgreSQL connects to the backend via JPA/Hibernate.
+PostgreSQL is shared by Spring Boot (JPA/Hibernate for users, portfolios, holdings,
+symbols, and top picks) and the Python worker/top-picks code (direct psycopg2 access
+for the `symbols` and `top_picks` tables). Configure both services to the same database.
 
 ---
 ## 3. Module Breakdown

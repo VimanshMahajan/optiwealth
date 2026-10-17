@@ -1,203 +1,114 @@
-# OptiWealth – Running & Operations Guide
+# OptiWealth: local development and deployment
 
-This guide explains how to set up, run, and validate the three components of the OptiWealth platform:
+## Architecture and service roots
 
-1. Spring Boot backend (portfolio & auth service)
-2. Python analytics microservice (risk, forecasting, optimization, AI summaries)
-3. React frontend (user interface)
+- Vercel frontend root: `frontend-react/`; build `npm run build`; output `dist`.
+- Railway Spring Boot root: `backend-springboot/`; Dockerfile builds the executable JAR.
+- Railway analytics root: `microservice-python/`; Dockerfile runs `controller:app` with Gunicorn.
+- Railway scheduler root: `microservice-python/`; start command `python symbol_refresh_worker.py`.
+- The browser calls Spring Boot. Spring Boot calls Python over Railway private networking. Both backend services use the same PostgreSQL database; the browser never connects to PostgreSQL or the private Python service.
 
----
-## 1. Prerequisites
+## Local development
 
-Install locally:
+Prerequisites: Java 17, Maven (or `mvnw.cmd`), Node.js 20+, Python 3.11+, and PostgreSQL 14+.
 
-| Component | Version |
-|-----------|---------|
-| Java      | 17      |
-| Maven     | 3.9+    |
-| Node.js   | 20+     |
-| npm       | Bundled |
-| Python    | 3.11+   |
-| PostgreSQL| 14+     |
+Set backend environment variables in the shell (PowerShell example):
 
----
-## 2. Repository Structure (Simplified)
-```
-backend-springboot/    Spring Boot API (auth, portfolios, orchestration)
-frontend-react/        React + Vite client application
-microservice-python/   Analytics & AI microservice (Flask + scheduling)
-```
-Supporting folders: `microservice-python/utils/`, `microservice-python/top_picks/`.
-
----
-## 3. Configuration & Secrets
-
-Do not commit secrets.
-
-### Backend (Spring Boot)
-Create `src/main/resources/application-local.properties` from the example:
-```
-spring.datasource.url=jdbc:postgresql://localhost:5432/portfolio_db
-spring.datasource.username=postgres
-spring.datasource.password=yourpassword
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
-
-jwt.secret=replace-with-long-base64-secret
-jwt.expiration=86400000
-
-microservice.python.url=http://localhost:8000
+```powershell
+$env:JWT_SECRET = '<a fresh local base64 secret of at least 32 bytes>'
+$env:SPRING_DATASOURCE_URL = 'jdbc:postgresql://localhost:5432/portfolio_db'
+$env:SPRING_DATASOURCE_USERNAME = 'postgres'
+$env:SPRING_DATASOURCE_PASSWORD = '<your local database password>'
+$env:PYTHON_SERVICE_URL = 'http://localhost:8000'
 ```
 
-### Python Microservice (.env)
-Create `microservice-python/.env`:
-```
-GOOGLE_API_KEY=your-google-genai-key
-PYTHON_ENV=local
-```
+The JWT signing key previously present in the tracked properties file has been removed. Create a fresh local secret, for example with `openssl rand -base64 32`; do not reuse the old exposed value.
 
-### Frontend (.env)
-```
-VITE_API_BASE=http://localhost:8080
-```
-Access via `import.meta.env.VITE_API_BASE`.
+Run Python from `microservice-python/`:
 
----
-## 4. Python Analytics Microservice Setup
-
-From the repository root (or `microservice-python/`):
-```
+```powershell
 python -m venv .venv
-.venv\Scripts\activate
-```
-Install dependencies (requires `requirements.txt` in project root):
-```
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-```
-Run service:
-```
-python microservice-python/controller.py
-```
-Listens on `0.0.0.0:8000`.
-
-Health check:
-```
-curl http://localhost:8000/
-```
-Expect JSON status response.
-
----
-## 5. Spring Boot Backend Setup
-
-From `backend-springboot/`:
-```
-./mvnw clean install
-./mvnw spring-boot:run
-```
-(Windows alternative: `mvnw.cmd spring-boot:run`)
-
-Package:
-```
-./mvnw package
-java -jar target/optiwealth_backend_sb-0.0.1-SNAPSHOT.jar
+$env:DB_HOST = 'localhost'
+$env:DB_PORT = '5432'
+$env:DB_NAME = 'portfolio_db'
+$env:DB_USER = 'postgres'
+$env:DB_PASSWORD = '<your local database password>'
+$env:GOOGLE_API_KEY = '<optional Gemini key>'
+python controller.py
 ```
 
----
-## 6. React Frontend Setup
+The API runs on `0.0.0.0:8000` by default; set `PORT` to override. Gemini summaries are unavailable without `GOOGLE_API_KEY`, but the service still starts. The worker requires the Python DB variables when it accesses PostgreSQL.
 
-From `frontend-react/`:
-```
-npm install
-npm run dev
-```
-Visit: `http://localhost:5173`.
+Run Spring Boot from `backend-springboot/` with `mvnw.cmd spring-boot:run` (or `mvn spring-boot:run`). Run the frontend from `frontend-react/` with `npm install` then `npm run dev`. Its default backend URL is `http://localhost:8080`; use `VITE_API_BASE_URL` for a different URL. The previous `VITE_API_URL` remains a compatibility fallback.
 
-Production build:
+## Railway deployment
+
+Create one Railway PostgreSQL service, then configure both application services to use that same database. Railway exposes `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` for service connections ([Railway PostgreSQL docs](https://docs.railway.com/databases/postgresql)). In each app service's Variables, use Railway reference variables (replace `Postgres` with the actual database service name):
+
+```text
+SPRING_DATASOURCE_URL=jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}
+SPRING_DATASOURCE_USERNAME=${{Postgres.PGUSER}}
+SPRING_DATASOURCE_PASSWORD=${{Postgres.PGPASSWORD}}
+DB_HOST=${{Postgres.PGHOST}}
+DB_PORT=${{Postgres.PGPORT}}
+DB_NAME=${{Postgres.PGDATABASE}}
+DB_USER=${{Postgres.PGUSER}}
+DB_PASSWORD=${{Postgres.PGPASSWORD}}
 ```
+
+This constructs JDBC format from Railway's individual fields; do not assume `DATABASE_URL` is JDBC formatted. Keep credential references inside Railway variables, never repository files.
+
+**Spring Boot service** (root `backend-springboot/`, Dockerfile build):
+
+- Required: `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `PYTHON_SERVICE_URL`, `FRONTEND_ORIGIN`.
+- Railway supplies `PORT`; the app listens on it, with local default `8080`.
+- `JWT_SECRET` must be a newly generated, strong base64 key (at least 32 random bytes). Never reuse the removed committed value.
+- Set `PYTHON_SERVICE_URL` to the Python service's Railway private-network URL, typically `http://<service-name>.railway.internal:<port>` using the actual service name and listening port shown by Railway. Railway documents this private hostname pattern and recommends internal HTTP for same-environment service calls ([private networking docs](https://docs.railway.com/networking/private-networking)).
+- Set `FRONTEND_ORIGIN` to the exact deployed Vercel origin, without a path. That URL is intentionally not assumed here.
+
+**Python analytics service** (root `microservice-python/`, Dockerfile build):
+
+- Required for analytics DB access and scheduler: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
+- `GOOGLE_API_KEY` is optional; without it, quantitative analytics remains available and the AI summary reports unavailable.
+- Railway supplies `PORT` (default 8000). Gunicorn serves `controller:app`.
+
+**Scheduler service:** deploy a second Railway service from the same Python root and Dockerfile, overriding its start command to `python symbol_refresh_worker.py`. It performs an initial refresh and repeats daily at 02:00, and writes the `symbols` and `top_picks` tables used by symbol lookup and Top Picks. Run exactly one scheduler instance per database. The Flask API does not start APScheduler in its Gunicorn workers. Supply the same five DB variables to this service. If Top Picks/symbol refresh is required, this worker service is required.
+
+The Java entities use `app_user`, `portfolio`, `holding`, `symbols`, and `top_picks`; Python refreshes `symbols` and writes `top_picks`. Keep all services on the same PostgreSQL database. Hibernate remains configured with `ddl-auto=update`; no migration framework was added.
+
+## Vercel deployment
+
+- Project root: `frontend-react/`
+- Build command: `npm run build`
+- Output directory: `dist`
+- Environment variable: `VITE_API_BASE_URL=https://<your-public-spring-service-domain>` (the public Spring Boot URL).
+- `vercel.json` rewrites client routes to `index.html` for React Router deep links.
+
+After deploying, copy the actual Vercel origin into Railway's `FRONTEND_ORIGIN`, then rebuild the frontend after setting `VITE_API_BASE_URL`. CORS allows that configured origin plus localhost development origins, with credentials and the Authorization header.
+
+## Build and verification commands
+
+```powershell
+# Python (from microservice-python/)
+python -m pip install -r requirements.txt
+python -c "import controller; print(controller.app.url_map)"
+
+# Spring Boot (JWT_SECRET must be set; from repository root)
+.\backend-springboot\mvnw.cmd -f .\backend-springboot\pom.xml test
+.\backend-springboot\mvnw.cmd -f .\backend-springboot\pom.xml package
+
+# Frontend (from frontend-react/)
+npm ci
 npm run build
 ```
-Output: `dist/`.
 
----
-## 7. End-to-End Flow: Portfolio Analysis
+Local smoke checks: `Invoke-RestMethod http://localhost:8000/`, register/login through the UI, then exercise portfolio create/list/update/delete, symbol search, Top Picks (after running the worker), and portfolio analytics. In production, repeat login and portfolio CRUD, call analytics through Spring, verify the worker refreshed symbols/Top Picks, and confirm browser requests target Spring only.
 
-1. Start Python microservice (port 8000).
-2. Start Spring Boot backend (configured with `microservice.python.url`).
-3. Start React frontend.
-4. User submits holdings → backend forwards to Python `/analyze-portfolio` → returns JSON (descriptive, risk, forecasts, optimization, AI summary).
+## Operational notes
 
-The microservice appends `.NS` automatically for NSE symbols.
-
----
-## 8. Symbol Catalog and Scheduler Behavior
-
-The symbol catalog is stored in the PostgreSQL `symbols` table. Do not copy or update
-`valid_symbols.csv` in either service. Start the dedicated worker from the repository
-root after the database is available:
-
-```
-python microservice-python/symbol_refresh_worker.py
-```
-
-The worker downloads the NSE equity list, updates the catalog transactionally, and
-then refreshes top picks. It runs once at startup and daily at 02:00. The Flask API
-does not run the worker, so analytics requests are never blocked by a catalog or
-top-picks refresh. Run only one worker instance per database.
-
----
-## 9. Testing & Quality
-
-Backend:
-```
-./mvnw test
-```
-Frontend:
-```
-npm run lint
-npm run build
-```
-Python (manual checks): run individual modules or invoke `/analyze-portfolio`.
-
----
-## 10. Common Issues & Resolutions
-
-| Symptom | Cause | Resolution |
-|--------|-------|------------|
-| 404 to microservice | Property key mismatch | Use `microservice.python.url` consistently |
-| CORS errors | Missing CORS config | Add Spring CORS configuration bean |
-| Empty analytics response | No market data | Verify symbol & network connectivity |
-| AI summary raw text | Response not valid JSON | Check `GOOGLE_API_KEY` and `.env` load |
-| Duplicate refreshes | Multiple worker processes | Run exactly one `symbol_refresh_worker.py` instance |
-
----
-## 11. Security
-
-- Externalize secrets (JWT, DB credentials) via environment variables.
-- Enforce the symbol whitelist using the PostgreSQL `symbols` table.
-- Use HTTPS in front of services.
-- Apply rate limiting on analytics endpoints.
-
----
-## 12. Quick Reference Commands
-
-Backend:
-```
-./mvnw spring-boot:run
-```
-Python:
-```
-python microservice-python/controller.py
-```
-Frontend:
-```
-cd frontend-react
-npm run dev
-```
-Tests:
-```
-./mvnw test
-```
-
----
-Architectural details: see `ARCHITECTURE.md`.
+- Flask health route: `GET /`, returning service/status JSON.
+- API routes are Spring-authenticated except `/auth/**`; analytics internally calls Python `POST /analyze-portfolio`.
+- Database availability and market-data provider access are required for database-backed routes and analytics respectively.
+- Do not run multiple scheduler processes against one database.

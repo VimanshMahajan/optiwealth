@@ -15,11 +15,19 @@ DB_CONFIG = {
     "port": int(os.getenv("DB_PORT", "5432")),
 }
 
+
+def _database_config():
+    names = {"DB_NAME": "dbname", "DB_USER": "user", "DB_PASSWORD": "password", "DB_HOST": "host"}
+    missing = [key for key, field in names.items() if not DB_CONFIG[field]]
+    if missing:
+        raise RuntimeError("Missing required Python database environment variables: " + ", ".join(missing))
+    return DB_CONFIG
+
 NSE_SYMBOLS_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
 
 
 def get_connection():
-    return psycopg2.connect(**DB_CONFIG)
+    return psycopg2.connect(**_database_config())
 
 
 def get_active_symbols():

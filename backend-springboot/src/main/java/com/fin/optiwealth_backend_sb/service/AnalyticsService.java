@@ -4,23 +4,30 @@ import com.fin.optiwealth_backend_sb.entity.AppUser;
 import com.fin.optiwealth_backend_sb.entity.Portfolio;
 import com.fin.optiwealth_backend_sb.repository.AppUserRepository;
 import com.fin.optiwealth_backend_sb.repository.PortfolioRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class AnalyticsService {
 
-    private final WebClient webClient = WebClient.create("http://localhost:8000");
+    private final WebClient webClient;
     private final AppUserRepository appUserRepository;
     private final PortfolioRepository portfolioRepository;
+
+    public AnalyticsService(AppUserRepository appUserRepository,
+                            PortfolioRepository portfolioRepository,
+                            @Value("${microservice.python.url}") String pythonServiceUrl) {
+        this.appUserRepository = appUserRepository;
+        this.portfolioRepository = portfolioRepository;
+        this.webClient = WebClient.create(pythonServiceUrl);
+    }
 
     private AppUser getCurrentUser() {
         try {

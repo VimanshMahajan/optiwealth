@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const baseURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 const api = axios.create({
     baseURL,
@@ -8,9 +8,6 @@ const api = axios.create({
         "Content-Type": "application/json",
     },
 });
-
-// Debug: Log the API base URL (remove in production)
-console.log("API Base URL:", baseURL);
 
 // Interceptor to attach token if present
 api.interceptors.request.use((config) => {

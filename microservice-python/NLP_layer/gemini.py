@@ -5,8 +5,6 @@ from google import genai
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-
 def clean_response(response: str) -> str:
     """
     Removes markdown code fences like ```json ... ``` from a model's response.
@@ -33,6 +31,10 @@ def clean_response(response: str) -> str:
 
 def generate_response_helper(prompt):
     try:
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            return "Gemini summary unavailable: GOOGLE_API_KEY is not configured"
+        client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=[prompt]
