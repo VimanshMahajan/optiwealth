@@ -87,7 +87,7 @@ Standard GitHub-hosted runner usage is free for public repositories; private rep
 Add these GitHub Actions secrets (Settings → Secrets and variables → Actions):
 
 - `DB_HOST`: Railway PostgreSQL public TCP proxy hostname.
-- `DB_PORT`: Railway PostgreSQL public TCP proxy port.
+- `DB_PORT`: Railway PostgreSQL public TCP proxy port (defaults to `5432` when omitted; set the actual port when using a pooler/proxy port).
 - `DB_NAME`: database name.
 - `DB_USER`: database username.
 - `DB_PASSWORD`: database password.
