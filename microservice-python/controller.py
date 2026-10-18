@@ -9,6 +9,7 @@ from report_generator import generate_portfolio_report, convert_numpy
 app = Flask(__name__)
 
 @app.route("/")
+@app.route("/health")
 def home():
     return jsonify({
         "service": "OptiWealth Python Analytics Service",
