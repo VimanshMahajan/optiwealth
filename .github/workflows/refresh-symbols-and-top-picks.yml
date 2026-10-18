@@ -3,7 +3,7 @@ name: Refresh symbols and Top Picks
 on:
   push:
     branches:
-      - deploy-project
+      - main
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch:
