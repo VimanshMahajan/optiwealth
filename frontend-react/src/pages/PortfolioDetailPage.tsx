@@ -8,9 +8,9 @@ import {
     addHolding,
     updateHolding,
     deleteHolding,
-    analyzePortfolio,
 } from "../services/portfolioService";
 import type { Portfolio, Holding, AnalyticsResult } from "../services/portfolioService";
+import { clearAnalyticsTask, startOrJoinAnalyticsTask, subscribeToAnalyticsTask } from "../services/analyticsTask";
 import "./PortfolioDetail.css";
 
 const PortfolioDetailPage: React.FC = () => {
@@ -23,6 +23,7 @@ const PortfolioDetailPage: React.FC = () => {
     const [analytics, setAnalytics] = useState<AnalyticsResult | null>(null);
     const [loading, setLoading] = useState(true);
     const [analyzing, setAnalyzing] = useState(false);
+    const [analysisError, setAnalysisError] = useState<string | null>(null);
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -70,7 +71,9 @@ const PortfolioDetailPage: React.FC = () => {
 
     useEffect(() => {
         loadPortfolioData();
-        // Load cached analytics from sessionStorage
+    }, [loadPortfolioData]);
+
+    useEffect(() => {
         const cachedAnalytics = sessionStorage.getItem(`analytics_${portfolioId}`);
         if (cachedAnalytics) {
             try {
@@ -79,21 +82,34 @@ const PortfolioDetailPage: React.FC = () => {
                 console.error("Error loading cached analytics:", error);
             }
         }
-    }, [loadPortfolioData, portfolioId]);
 
-    const handleAnalyze = async () => {
-        try {
-            setAnalyzing(true);
-            const result = await analyzePortfolio(portfolioId);
-            setAnalytics(result);
-            // Cache the analytics result in sessionStorage
-            sessionStorage.setItem(`analytics_${portfolioId}`, JSON.stringify(result));
-        } catch (error) {
+        return subscribeToAnalyticsTask(portfolioId, (task) => {
+            if (task.status === "running") {
+                setAnalyzing(true);
+                setAnalysisError(null);
+            } else if (task.status === "completed") {
+                setAnalytics(task.result);
+                setAnalyzing(false);
+                setAnalysisError(null);
+            } else {
+                setAnalyzing(false);
+                setAnalysisError("Analysis failed. Please try again.");
+            }
+        });
+    }, [portfolioId]);
+
+    const handleAnalyze = () => {
+        setAnalysisError(null);
+        void startOrJoinAnalyticsTask(portfolioId).catch((error) => {
             console.error("Error analyzing portfolio:", error);
-            alert("Failed to analyze portfolio. Make sure you have holdings added.");
-        } finally {
-            setAnalyzing(false);
-        }
+        });
+    };
+
+    const clearAnalytics = () => {
+        clearAnalyticsTask(portfolioId);
+        setAnalytics(null);
+        setAnalyzing(false);
+        setAnalysisError(null);
     };
 
     const handleAddHolding = async (e: React.FormEvent) => {
@@ -109,8 +125,7 @@ const PortfolioDetailPage: React.FC = () => {
             setFormData({ symbol: "", quantity: "", avgCost: "" });
             setShowAddModal(false);
             // Clear cached analytics since holdings changed
-            sessionStorage.removeItem(`analytics_${portfolioId}`);
-            setAnalytics(null);
+            clearAnalytics();
             await loadPortfolioData();
         } catch (error) {
             console.error("Error adding holding:", error);
@@ -132,8 +147,7 @@ const PortfolioDetailPage: React.FC = () => {
             setEditingHolding(null);
             setFormData({ symbol: "", quantity: "", avgCost: "" });
             // Clear cached analytics since holdings changed
-            sessionStorage.removeItem(`analytics_${portfolioId}`);
-            setAnalytics(null);
+            clearAnalytics();
             await loadPortfolioData();
         } catch (error) {
             console.error("Error updating holding:", error);
@@ -147,8 +161,7 @@ const PortfolioDetailPage: React.FC = () => {
         try {
             await deleteHolding(holdingId);
             // Clear cached analytics since holdings changed
-            sessionStorage.removeItem(`analytics_${portfolioId}`);
-            setAnalytics(null);
+            clearAnalytics();
             await loadPortfolioData();
         } catch (error) {
             console.error("Error deleting holding:", error);
@@ -204,10 +217,7 @@ const PortfolioDetailPage: React.FC = () => {
                         {analytics && (
                             <button
                                 className="btn-secondary"
-                                onClick={() => {
-                                    sessionStorage.removeItem(`analytics_${portfolioId}`);
-                                    setAnalytics(null);
-                                }}
+                                onClick={clearAnalytics}
                                 title="Clear cached analysis"
                             >
                                 🗑️ Clear Analysis
@@ -222,6 +232,9 @@ const PortfolioDetailPage: React.FC = () => {
                         </button>
                     </div>
                 </div>
+
+                {analyzing && <p role="status">Analysis continues while you navigate around OptiWealth. Return here to see the results.</p>}
+                {analysisError && <p role="alert">{analysisError}</p>}
 
                 {/* Holdings Section */}
                 <div className="section">
