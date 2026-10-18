@@ -1,4 +1,15 @@
+<div align="center">
+
 # OptiWealth
+
+![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3-brightgreen?style=flat-square)
+![Python](https://img.shields.io/badge/Python-Analytics-blue?style=flat-square)
+![React](https://img.shields.io/badge/React-Vite-61dafb?style=flat-square)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-DB-blue?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)
+
+</div>
 
 OptiWealth is a portfolio management and analytics application. It combines a React frontend, a Spring Boot API, a Python analytics service, and PostgreSQL storage.
 
