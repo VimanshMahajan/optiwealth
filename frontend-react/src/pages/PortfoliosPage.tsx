@@ -102,7 +102,6 @@ const PortfoliosPage: React.FC = () => {
                                     </span>
                                     <div>
                                         <h2 className="portfolio-name-large">{portfolio.name}</h2>
-                                        <p className="meta-item">Portfolio {portfolio.id}</p>
                                     </div>
                                 </div>
                                 <div className="portfolio-meta">

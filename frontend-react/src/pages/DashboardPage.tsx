@@ -133,7 +133,6 @@ const DashboardPage: React.FC = () => {
                                                 </span>
                                                 <div>
                                                     <h3 className="portfolio-name">{portfolio.name}</h3>
-                                                    <p className="portfolio-meta">Portfolio {portfolio.id}</p>
                                                 </div>
                                             </div>
                                             <div className="portfolio-card-footer">

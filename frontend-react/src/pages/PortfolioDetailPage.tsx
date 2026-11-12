@@ -17,6 +17,11 @@ const PortfolioDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const portfolioId = parseInt(id || "0");
+    const formatINR = (amount: number) => new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        maximumFractionDigits: 0,
+    }).format(amount);
 
     const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
     const [holdings, setHoldings] = useState<Holding[]>([]);
@@ -582,13 +587,13 @@ const PortfolioDetailPage: React.FC = () => {
                                     {analytics.optimization.maxSharpe && (
                                         <div className="optimization-card">
                                             <h3 className="optimization-heading">Maximum Sharpe Ratio</h3>
-                                            <p className="optimization-desc">Best risk-adjusted returns</p>
+                                            <p className="optimization-desc">Best risk-adjusted returns · amounts based on current portfolio value</p>
                                             <div className="weight-bars">
                                                 {Object.entries(analytics.optimization.maxSharpe).map(([symbol, weight]) => (
                                                     <div key={symbol} className="weight-bar-container">
                                                         <div className="weight-label">
                                                             <span className="weight-symbol">{symbol.replace('.NS', '')}</span>
-                                                            <span className="weight-percent">{((weight as number) * 100).toFixed(2)}%</span>
+                                                            <span className="weight-percent">{((weight as number) * 100).toFixed(2)}% → {formatINR((weight as number) * (analytics.portfolio?.portfolioValue || 0))}</span>
                                                         </div>
                                                         <div className="weight-bar-bg">
                                                             <div
@@ -606,13 +611,13 @@ const PortfolioDetailPage: React.FC = () => {
                                     {analytics.optimization.minVolatility && (
                                         <div className="optimization-card">
                                             <h3 className="optimization-heading">Minimum Volatility</h3>
-                                            <p className="optimization-desc">Lowest risk portfolio</p>
+                                            <p className="optimization-desc">Lowest risk portfolio · amounts based on current portfolio value</p>
                                             <div className="weight-bars">
                                                 {Object.entries(analytics.optimization.minVolatility).map(([symbol, weight]) => (
                                                     <div key={symbol} className="weight-bar-container">
                                                         <div className="weight-label">
                                                             <span className="weight-symbol">{symbol.replace('.NS', '')}</span>
-                                                            <span className="weight-percent">{((weight as number) * 100).toFixed(2)}%</span>
+                                                            <span className="weight-percent">{((weight as number) * 100).toFixed(2)}% → {formatINR((weight as number) * (analytics.portfolio?.portfolioValue || 0))}</span>
                                                         </div>
                                                         <div className="weight-bar-bg">
                                                             <div
